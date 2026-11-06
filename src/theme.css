@@ -1,0 +1,2 @@
+:root { color-scheme: light dark; --bg:#f7f8fc; --surface:#fff; --text:#202a3c; --muted:#647087; --border:#dce1eb; --accent:#5454d8; --accent-hover:#4545bc; --tint:#eeeefb; --error:#b52c42; }
+@media (prefers-color-scheme: dark) { :root { --bg:#141822; --surface:#1d2330; --text:#ecedf5; --muted:#a1acc1; --border:#333e51; --accent:#7775ee; --accent-hover:#6260d6; --tint:#292b45; --error:#ff94a5; } }

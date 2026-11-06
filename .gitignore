@@ -1,0 +1,12 @@
+node_modules/
+dist/
+artifacts/
+test-results/
+.env
+.env.*
+!.env.example
+*.log
+*.zip
+.DS_Store
+Thumbs.db
+.local/

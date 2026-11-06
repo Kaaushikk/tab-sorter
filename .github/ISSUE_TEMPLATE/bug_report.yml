@@ -1,0 +1,30 @@
+name: Bug report
+description: Report an extension behavior problem using synthetic tabs.
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include API keys or private tab URLs. Report security issues through SECURITY.md."
+  - type: input
+    id: environment
+    attributes:
+      label: Extension version, browser/version, and OS
+      placeholder: "0.1.0, Brave 1.x / Chromium x, Windows 11"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce with synthetic tabs
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Relevant settings
+      description: "Pinned/existing-group policy, window count, provider type, Shields/vertical tabs. Never post a key."
