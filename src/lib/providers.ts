@@ -4,6 +4,7 @@ import { parseJSON, validatePlan, validateStrategies } from './validation';
 import type { AiControl, Plan, Settings, Strategy, Tab } from './types';
 import { EmptyCompletionError, requestCompletion } from './transport';
 import { FAST_OPENROUTER_MODEL, isOpenRouter } from './storage';
+import { CHATGPT_HELPER, CHATGPT_PERMISSION, validPairingCode } from './chatgpt';
 
 export interface Provider {
   retryEmptyStream?: boolean;
@@ -11,6 +12,15 @@ export interface Provider {
 }
 export function createProvider(s: Settings): Provider {
   if (s.provider === 'none') throw new Error('Choose an AI provider in Settings, or use a local strategy.');
+  if (s.provider === 'chatgpt') {
+    if (!validPairingCode(s.chatgptKey) || !s.chatgptModel) throw new Error('Connect ChatGPT and select a model in Tab Sorter settings.');
+    return { async complete(instructions, input, control) {
+      if (!await chrome.permissions.contains({ origins: [CHATGPT_PERMISSION] })) throw new Error('Reconnect the ChatGPT helper in Settings.');
+      return requestCompletion(CHATGPT_HELPER + '/responses', {
+        Authorization: 'Bearer ' + s.chatgptKey, 'Content-Type': 'application/json',
+      }, { model: s.chatgptModel, instructions, input }, 'chatgpt', control);
+    } };
+  }
   if (!s.model.trim()) throw new Error('Set a model name in Settings.');
   if (s.provider !== 'ollama' && !s.apiKey.trim()) throw new Error('Add your API key in Settings.');
   const base = (s.provider === 'anthropic' ? 'https://api.anthropic.com' : s.baseUrl).replace(/\/+$/, '');

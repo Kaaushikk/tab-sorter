@@ -2,6 +2,7 @@ import type { Settings, Snapshot } from './types';
 
 export const DEFAULTS: Settings = {
   provider: 'none', baseUrl: 'https://api.openai.com/v1', model: '', apiKey: '',
+  chatgptKey: '', chatgptModel: '',
   titlesOnly: false, excludedDomains: [], includePinned: false,
   existingGroups: 'keep', unassigned: 'other', mergeSubdomains: false, presets: [],
 };

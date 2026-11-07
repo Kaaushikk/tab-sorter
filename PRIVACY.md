@@ -1,6 +1,6 @@
 # Tab Sorter Privacy Policy
 
-Effective November 5, 2026. Applies to the Tab Sorter browser extension, versions 0.1.x.
+Effective November 7, 2026. Applies to Tab Sorter version 0.2.0.
 
 ## No backend, analytics, or tracking
 
@@ -26,7 +26,9 @@ Titles, paths, and your instructions can still contain personal or sensitive inf
 
 Tabs on excluded domains or their subdomains, incognito tabs, browser internal pages, extension pages, file URLs, and other non-HTTP(S) pages are omitted. AI plans leave excluded tabs alone. Local strategies can still organize them on your device.
 
-Possible destinations are Anthropic's API, the OpenAI-compatible endpoint you configure, or your configured local Ollama server. Tab Sorter has no intermediary service. A custom endpoint is controlled by its operator. Remote endpoints require HTTPS; HTTP is allowed for loopback hosts only. Requests omit browser credentials/cookies and reject redirects.
+Possible destinations are OpenAI for ChatGPT plan usage, Anthropic's API, the OpenAI-compatible endpoint you configure, or your configured local Ollama server. The ChatGPT option passes the same filtered tab data through a helper running on your own computer. There is no hosted Tab Sorter intermediary. A custom endpoint is controlled by its operator. Remote endpoints require HTTPS; HTTP is allowed for loopback hosts only. API requests omit browser credentials/cookies and reject redirects.
+
+When you choose **Continue with ChatGPT**, you sign in directly with OpenAI and approve plan usage. The helper stores the account label, registration, and sign-in tokens in a file under your OS user profile. The browser stores a separate local pairing code. **Sign out** clears the selected account's local tokens and attempts to revoke its session. You can also disconnect access in ChatGPT settings. Uninstalling the extension alone does not remove the helper's local file.
 
 The provider's own privacy, retention, training, geographic processing, and billing policies govern the data it receives. Choosing a local Ollama URL sends requests to that local server; Tab Sorter cannot control any additional behavior configured in that server or model runtime.
 

@@ -22,6 +22,18 @@ interface CompletionPayload {
   choices?: { delta?: { content?: string }; message?: { content?: string }; finish_reason?: string }[];
 }
 
+function chatgptError(status: number, code?: string): Error {
+  if (status === 429 || status === 402 || code === 'subscription_sharing_usage_limit_exceeded') {
+    return new ProviderError('ChatGPT plan usage limit reached. Open Manage ChatGPT usage.');
+  }
+  if (status === 401) return new ProviderError('Connect or renew your ChatGPT session in Tab Sorter settings.');
+  if (status === 403 || code === 'subscription_sharing_usage_unavailable' || code === 'subscription_sharing_user_not_eligible') {
+    return new ProviderError('ChatGPT plan access is unavailable. Check the local pairing code and your account in Tab Sorter settings.');
+  }
+  if (status === 400) return new ProviderError('Check that your selected ChatGPT model is still available in Settings.');
+  return new ProviderError('ChatGPT did not complete the response. Try again or choose another available model.');
+}
+
 function checkText(text: unknown, finishReason?: string): string {
   if (finishReason === 'content_filter') throw new ProviderError('The AI provider filtered the response. Try fewer tabs or exclude sensitive sites in Settings.');
   if (typeof text !== 'string' || !text.trim()) {
@@ -38,16 +50,25 @@ export async function readCompletion(response: Response, provider: ProviderKind,
   if (!response.body) throw new EmptyCompletionError('The AI provider finished without returning a grouping.');
   const reader = response.body.getReader(), decoder = new TextDecoder();
   const streaming = response.headers.get('content-type')?.includes('text/event-stream');
-  let buffer = '', output = '', bytes = 0, finished = false, lastReport = -Infinity, reportedCharacters = 0;
+  let buffer = '', output = '', bytes = 0, finished = false, completed = false, lastReport = -Infinity, reportedCharacters = 0;
   let finishReason: string | undefined;
 
   function event(frame: string): void {
     const data = frame.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).replace(/^ /, '')).join('\n');
     if (!data) return; // SSE comments/heartbeats contain no data fields.
     if (data.trim() === '[DONE]') { finished = true; return; }
-    let payload: CompletionPayload;
+    let payload: CompletionPayload & { type?: string; delta?: string; code?: string; response?: { error?: { code?: string } } };
     try { payload = JSON.parse(data); } catch { throw new ProviderError('Provider sent an unreadable response stream. Try again or choose another model.'); }
     if (!payload || typeof payload !== 'object') throw new ProviderError('Provider sent an invalid response stream.');
+    if (provider === 'chatgpt') {
+      if (payload.type === 'response.failed' || payload.type === 'response.incomplete' || payload.type === 'error' || payload.error) {
+        throw chatgptError(502, payload.response?.error?.code ?? payload.code);
+      }
+      if (payload.type === 'response.output_text.delta' && typeof payload.delta === 'string') output += payload.delta;
+      if (output.length > MAX_TEXT_LENGTH) throw new ProviderError('ChatGPT returned an oversized response.');
+      if (payload.type === 'response.completed') { completed = true; finished = true; }
+      return;
+    }
     if (payload.error) throw httpError(typeof payload.error.code === 'number' ? payload.error.code : 502);
     const choice = payload.choices?.[0];
     if (choice?.finish_reason === 'error') throw new ProviderError('The provider stopped while generating suggestions. Try again or choose another model.');
@@ -81,8 +102,10 @@ export async function readCompletion(response: Response, provider: ProviderKind,
     }
     if (streaming) {
       if (!finished && buffer.trim()) event(buffer);
+      if (provider === 'chatgpt' && !completed) throw chatgptError(502);
       return checkText(output, finishReason);
     }
+    if (provider === 'chatgpt') throw chatgptError(502);
     if (!buffer.trim()) return checkText(buffer);
     let payload: CompletionPayload;
     try { payload = JSON.parse(buffer); } catch { throw new ProviderError('Provider returned an unreadable response. Check the endpoint and try again.'); }
@@ -114,7 +137,10 @@ export async function requestCompletion(url: string, headers: Record<string, str
     const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'omit', redirect: 'error', signal });
     receivedHeaders = true;
     clearTimeout(connectionTimer);
-    if (!response.ok) { await response.body?.cancel().catch(() => undefined); throw httpError(response.status); }
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw provider === 'chatgpt' ? chatgptError(response.status) : httpError(response.status);
+    }
     await control?.report({ stage: 'waiting' });
     return await readCompletion(response, provider, control);
   } catch (error) {
@@ -123,6 +149,7 @@ export async function requestCompletion(url: string, headers: Record<string, str
       throw new Error(`The AI provider took too long to respond. ${receivedHeaders ? 'The response did not finish within 60 seconds.' : 'The provider did not start a response within 25 seconds.'} No tabs were changed. Try again shortly or choose another model.`);
     }
     if (error instanceof ProviderError) throw error;
+    if (provider === 'chatgpt') throw new Error('Could not reach the Tab Sorter ChatGPT helper. Start it and check the connection in Settings.');
     throw new Error('Provider connection failed or was interrupted. Check the endpoint, network, and local server origin settings, then try again.');
   } finally {
     clearTimeout(connectionTimer); clearTimeout(responseTimer); clearInterval(activity);

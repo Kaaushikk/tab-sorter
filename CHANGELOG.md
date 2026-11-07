@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Added in v0.2.0
+
+- Use an eligible ChatGPT plan for tab previews through OpenAI's sign-in flow and an optional local helper.
+
 ### Fixed in v0.1.3
 
 - Retry an empty OpenRouter stream once as a complete response from the same model. Distinguish empty, oversized, and filtered replies in the popup.

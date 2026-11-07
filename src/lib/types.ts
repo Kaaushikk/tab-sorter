@@ -6,9 +6,10 @@ export interface Group { id: number; title: string; color: Color; collapsed: boo
 export interface PlanGroup { name: string; color: Color; tabIds: number[] }
 export interface Plan { groups: PlanGroup[] }
 export interface Strategy extends Plan { id: string; label: string; description: string }
-export type ProviderKind = 'none' | 'anthropic' | 'openai' | 'ollama';
+export type ProviderKind = 'none' | 'anthropic' | 'openai' | 'ollama' | 'chatgpt';
 export interface Settings {
   provider: ProviderKind; baseUrl: string; model: string; apiKey: string;
+  chatgptKey: string; chatgptModel: string;
   titlesOnly: boolean; excludedDomains: string[]; includePinned: boolean;
   existingGroups: 'keep' | 'merge' | 'dissolve'; unassigned: 'other' | 'ungrouped';
   mergeSubdomains: boolean; presets: { id: string; name: string; instruction: string }[];
@@ -19,7 +20,7 @@ export interface Snapshot {
   created: { groupId: number; title: string; color: Color; tabIds: number[]; undone?: boolean }[];
   restored: number[]; restoredGroups?: Record<number, number>; status: 'pending' | 'ready' | 'partial' | 'undone'; closedAt?: number;
 }
-export interface WindowState { windowId: number; tabs: Tab[]; groups: Group[]; strategies: Strategy[]; snapshots: Snapshot[]; settings: Omit<Settings, 'apiKey'>; notice?: string }
+export interface WindowState { windowId: number; tabs: Tab[]; groups: Group[]; strategies: Strategy[]; snapshots: Snapshot[]; settings: Omit<Settings, 'apiKey' | 'chatgptKey'>; notice?: string }
 export interface Result { restored: number; skipped: number; message: string }
 export type AiStage = 'preparing' | 'connecting' | 'waiting' | 'receiving' | 'validating' | 'retrying';
 export interface AiProgress { stage?: AiStage; attempt?: number; batch?: number; batches?: number; characters?: number }

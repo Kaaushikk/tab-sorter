@@ -2,6 +2,9 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; font: 13px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+a { color: var(--accent); }
+dialog { max-width: 360px; border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--surface); color: var(--text); }
+dialog button { margin-top: 14px; }
 button,input,textarea,select { font: inherit; }
 button { cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; padding: 8px 11px; font-weight: 600; }
 button:hover { border-color: var(--accent); background: var(--tint); }

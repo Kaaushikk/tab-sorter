@@ -1,6 +1,7 @@
 import '../style.css';
 import { button, el } from '../lib/ui';
 import { FAST_OPENROUTER_MODEL } from '../lib/storage';
+import { CHATGPT_USAGE } from '../lib/chatgpt';
 import type { AiCommand, AiJob, Command, Response, Strategy, WindowState } from '../lib/types';
 
 const root = document.querySelector<HTMLElement>('#app')!; root.className = 'popup';
@@ -186,7 +187,12 @@ async function init(): Promise<void> {
   const tools = el('div', undefined, 'row');
   tools.append(button('Ungroup all', () => run(async () => { const r = await send<{message:string}>({ type: 'ungroupAll', windowId }); show(r.message); await reload(); })), button('Collapse all groups', () => run(async () => { await send({ type: 'collapseAll', windowId }); await reload(); show('Groups collapsed.'); })));
   const toolbar = el('div', undefined, 'toolbar row'); toolbar.append(button('Cancel', () => { selected = undefined; renderStrategies(); status.hidden = true; }), apply);
-  root.append(header, suggest, el('p', 'Local strategies always work without an API key.', 'muted'), status, progressDetails, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), strategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
+  const providerHint = el('p', 'Local strategies always work without an API key.', 'muted');
+  if (state.settings.provider === 'chatgpt') {
+    const usage = el('a', 'Manage ChatGPT usage'); usage.href = CHATGPT_USAGE; usage.target = '_blank'; usage.rel = 'noopener';
+    providerHint.replaceChildren('Using ChatGPT plan · ', usage);
+  }
+  root.append(header, suggest, providerHint, status, progressDetails, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), strategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
   instruction.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void custom(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!apply.disabled) apply.click(); } });
   busy = true; locks();

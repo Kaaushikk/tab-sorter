@@ -11,7 +11,7 @@ Organize one browser window into native tab groups. Choose a local strategy, ask
 
 - Strictly one window at a time; no all-windows mode or cross-profile behavior.
 - Always-available **By website** and **By content type** strategies, entirely on device.
-- Optional AI suggestions, custom instructions, and refinements through Anthropic, an OpenAI-compatible endpoint, or local Ollama. No Tab Sorter server.
+- Optional AI suggestions, custom instructions, and refinements through a ChatGPT plan, Anthropic, an OpenAI-compatible endpoint, or local Ollama. No hosted Tab Sorter server.
 - Flat native groups with titles and colors, group previews, Collapse all, and Ungroup all.
 - Per-group Undo, Ungroup, and Collapse/Expand in the persistent **Groups created** list.
 - **Undo all** and the last five snapshots per window, including recovery after a restart where tab identity can be established.
@@ -63,6 +63,16 @@ Closed tabs are skipped, never reopened. Tabs moved to another window, manually 
 Histories of normally closed windows are cleaned on subsequent use. Histories from a previous browser session are retained for up to seven days to allow restart matching, then expired on use. This retention avoids deleting every snapshot when browser shutdown closes its windows. Settings → **Clear all undo history** removes them immediately.
 
 ## AI provider setup
+
+### ChatGPT plan
+
+Use an eligible ChatGPT plan with the **ChatGPT plan** provider. This preview uses OpenAI's official browser sign-in and requires the local Tab Sorter helper. No API key is needed.
+
+1. On Windows, double-click **Start ChatGPT helper.cmd** in the project folder. On any supported Node.js installation, you can also run `npm run chatgpt` from the project folder. Keep the helper running while using ChatGPT for grouping.
+2. In **Tab Sorter → Settings**, choose **ChatGPT plan** and paste the local pairing code shown by the helper. Click **Continue with ChatGPT** and allow Tab Sorter to connect to the local helper.
+3. Sign in and approve plan usage on OpenAI's page. Return to Settings, click **Check connection**, choose a model, and click **Save settings**. Then try **Suggest groupings** in the popup.
+
+The helper listens only on `127.0.0.1:43128`. Its pairing code authenticates the extension to the helper; OpenAI sign-in tokens stay in a local credential file under your user profile. Tab Sorter applies the same titles-only and excluded-domain settings before sending tab details to OpenAI. Eligible requests use your ChatGPT plan or available credits. Use **Sign out** in Settings to end the local session and **Manage ChatGPT usage** to review limits or revoke access. [OpenAI sign-in documentation](https://developers.openai.com/siwc/token-sharing-open-source).
 
 Open Settings with the gear button. Choose a provider, enter its exact model ID and configuration, click **Allow endpoint access**, then **Save settings**. Host access is requested only for that endpoint, never at install. Switching providers clears the unsaved key/model fields; save the desired configuration.
 

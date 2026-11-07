@@ -11,7 +11,7 @@ import type { Command, Response, Strategy, WindowState } from '../lib/types';
 async function load(windowId: number): Promise<WindowState> {
   const notice = await recoverWindow(windowId);
   const current = await readWindow(windowId), s = await settings(), counts = await frequency();
-  const { apiKey: _key, ...safeSettings } = s; void _key;
+  const { apiKey, chatgptKey, ...safeSettings } = s; void apiKey; void chatgptKey;
   const cache = (await chrome.storage.session.get(`preview:${windowId}`))[`preview:${windowId}`] as { strategies: Strategy[]; tabs?: typeof current.tabs } | undefined;
   const local = localStrategies(current.tabs, s);
   await chrome.storage.session.set({ [`seen:${windowId}`]: current.tabs.map(t => ({ id:t.id, url:t.url, groupId:t.groupId, pinned:t.pinned })) });
@@ -34,7 +34,7 @@ async function execute(c: Command): Promise<unknown> {
   if (c.type === 'cancelAi') return { cancelled: await cancelAi(windowId, c.requestId) };
   const current = await readWindow(windowId), s = await settings();
   if (c.type === 'suggest' || c.type === 'custom' || c.type === 'refine') {
-    return runAiJob(windowId, c.requestId ?? crypto.randomUUID(), s.model, async (control, publish) => {
+    return runAiJob(windowId, c.requestId ?? crypto.randomUUID(), s.provider === 'chatgpt' ? s.chatgptModel : s.model, async (control, publish) => {
       const result = c.type === 'suggest' ? await suggest(current.tabs, s, control) : [await customPlan(current.tabs, s, c.instruction, c.type === 'refine' ? c.strategy : undefined, control)];
       const strategies = c.type === 'suggest' ? result : [...(await load(windowId)).strategies.filter(x => x.id.startsWith('ai:') && x.id !== result[0].id), ...result];
       publish(); // Once results are ready to store, cancellation cannot discard them halfway through.

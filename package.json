@@ -1,11 +1,12 @@
 {
   "name": "tab-sorter",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Private, window-scoped native tab groups for Chromium browsers",
   "license": "MIT",
   "scripts": {
+    "chatgpt": "node scripts/chatgpt-helper.mjs",
     "dev": "vite build --watch",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",

@@ -53,6 +53,26 @@ it('returns streamed suggestions through the background without grouping any tab
   expect(await status()).toMatchObject({status:'succeeded',model:FAST_OPENROUTER_MODEL});
   expect(mock.api.tabs.group).not.toHaveBeenCalled();expect(mock.api.tabs.ungroup).not.toHaveBeenCalled();expect(mock.tabs.every(t=>t.groupId===-1)).toBe(true);
 });
+it('turns completed ChatGPT plan output into a preview and keeps the pairing code out of state', async () => {
+  const chatgptKey = 'a'.repeat(43);
+  mock.local.settings = { ...DEFAULTS, provider: 'chatgpt', chatgptKey, chatgptModel: 'test-model', titlesOnly: true };
+  const frame = (event: object) => 'data: ' + JSON.stringify(event) + '\n\n';
+  const output = frame({ type: 'response.output_text.delta', delta: suggestionOutput() });
+  const headers = { 'content-type': 'text/event-stream' };
+  const fetchMock = vi.fn().mockResolvedValueOnce(new Response(output, { headers }))
+    .mockResolvedValueOnce(new Response(output + frame({ type: 'response.completed' }), { headers }));
+  vi.stubGlobal('fetch', fetchMock);
+  await expect(send({ type: 'suggest', windowId: 1 })).rejects.toThrow(/did not complete/);
+  const result = await send<{ state: WindowState }>({ type: 'suggest', windowId: 1 });
+  expect(result.state.strategies.filter(strategy => strategy.id.startsWith('ai:'))).toHaveLength(3);
+  expect(fetchMock.mock.calls[1][0]).toBe('http://127.0.0.1:43128/responses');
+  const request = JSON.parse(fetchMock.mock.calls[1][1].body);
+  expect(request.model).toBe('test-model');
+  expect(JSON.parse(request.input).tabs).toEqual(result.state.tabs.map(({ id, title }) => ({ id, title })));
+  expect(JSON.stringify(result)).not.toContain(chatgptKey);
+  expect(mock.api.tabs.group).not.toHaveBeenCalled();
+});
+
 it('reports connection, waiting and receiving while a suggestion runs, then aborts it on cancel',async()=>{
   mock.local.settings={...freeSettings};
   const encoder=new TextEncoder();
