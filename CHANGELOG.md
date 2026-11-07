@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Fixed in v0.2.1
+
+- Open the popup before reading the active provider. Show the ChatGPT plan label once settings have loaded.
+
 ### Added in v0.2.0
 
 - Use an eligible ChatGPT plan for tab previews through OpenAI's sign-in flow and an optional local helper.

@@ -18,6 +18,7 @@ const strategies = el('div', undefined, 'stack'), history = el('section'), prese
 const instruction = el('textarea'); instruction.placeholder = 'Group by website, separate work from entertainment…'; instruction.maxLength = 2000; instruction.setAttribute('aria-label', 'Custom grouping instruction');
 const refine = el('input'); refine.placeholder = 'Refine this plan…'; refine.maxLength = 2000; refine.setAttribute('aria-label', 'Refine selected grouping');
 const scope = el('div', 'This window only', 'scope');
+const providerHint = el('p', 'Local strategies always work without an API key.', 'muted');
 const apply = button('Apply grouping', () => run(async () => { if (!selected) return; const result = await send<{message:string}>({ type: 'apply', windowId, strategy: selected }); selected = undefined; show(result.message); await reload(); }), 'primary');
 const refinement = el('div', undefined, 'stack'); refinement.hidden = true;
 
@@ -164,6 +165,12 @@ function renderHistory(): void {
 }
 async function reload(): Promise<void> {
   state = await send<WindowState>({ type: 'load', windowId });
+  if (state.settings.provider === 'chatgpt') {
+    const usage = el('a', 'Manage ChatGPT usage'); usage.href = CHATGPT_USAGE; usage.target = '_blank'; usage.rel = 'noopener';
+    providerHint.replaceChildren('Using ChatGPT plan · ', usage);
+  } else {
+    providerHint.textContent = 'Local strategies always work without an API key.';
+  }
   if (selected) selected = state.strategies.find(s => s.id === selected!.id);
   scope.textContent = `This window only · ${state.tabs.length} tabs`;
   presets.replaceChildren();
@@ -187,11 +194,6 @@ async function init(): Promise<void> {
   const tools = el('div', undefined, 'row');
   tools.append(button('Ungroup all', () => run(async () => { const r = await send<{message:string}>({ type: 'ungroupAll', windowId }); show(r.message); await reload(); })), button('Collapse all groups', () => run(async () => { await send({ type: 'collapseAll', windowId }); await reload(); show('Groups collapsed.'); })));
   const toolbar = el('div', undefined, 'toolbar row'); toolbar.append(button('Cancel', () => { selected = undefined; renderStrategies(); status.hidden = true; }), apply);
-  const providerHint = el('p', 'Local strategies always work without an API key.', 'muted');
-  if (state.settings.provider === 'chatgpt') {
-    const usage = el('a', 'Manage ChatGPT usage'); usage.href = CHATGPT_USAGE; usage.target = '_blank'; usage.rel = 'noopener';
-    providerHint.replaceChildren('Using ChatGPT plan · ', usage);
-  }
   root.append(header, suggest, providerHint, status, progressDetails, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), strategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
   instruction.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void custom(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!apply.disabled) apply.click(); } });
