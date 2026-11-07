@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Fixed
+
+- Add the required UUID namespace to the ChatGPT helper's host ID. Restarting the helper upgrades existing IDs and preserves the pairing code.
+
 ### Fixed in v0.2.1
 
 - Open the popup before reading the active provider. Show the ChatGPT plan label once settings have loaded.

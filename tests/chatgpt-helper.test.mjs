@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdtemp, readFile, rm, rmdir } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, rmdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { URL } from 'node:url';
@@ -52,6 +52,7 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
     const auth = new URL(url);
     expect(auth.origin).toBe(issuer);
     expect(auth.searchParams.get('client_id')).toBe('dynamic_agent_client');
+    expect(auth.searchParams.get('ext_agent_host_id')).toMatch(/^urn:uuid:[\da-f-]{36}$/);
     expect(auth.searchParams.get('scope')).toContain(scope);
     callback = auth.searchParams.get('redirect_uri');
     challenge = auth.searchParams.get('code_challenge');
@@ -90,6 +91,22 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
   } finally {
     await new Promise(done => server.close(done));
     await rm(join(directory, 'chatgpt.json'), { force: true });
+    await rmdir(directory);
+  }
+});
+
+it('upgrades the host identifier of an existing helper without changing its pairing code', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'tab-sorter-chatgpt-'));
+  const file = join(directory, 'chatgpt.json');
+  const original = { key: 'synthetic-pairing-code', hostId: '26fb78dc-940a-46b2-bce3-ab0daf7c110c', profiles: {}, active: null };
+  await writeFile(file, JSON.stringify(original));
+  const { key, server } = await startHelper({ directory, port: 0 });
+  try {
+    expect(key).toBe(original.key);
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ ...original, hostId: 'urn:uuid:' + original.hostId });
+  } finally {
+    await new Promise(done => server.close(done));
+    await rm(file, { force: true });
     await rmdir(directory);
   }
 });

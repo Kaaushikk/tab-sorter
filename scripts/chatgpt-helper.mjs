@@ -52,8 +52,10 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
   try { data = JSON.parse(await readFile(file, 'utf8')); }
   catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    data = { key: random(), hostId: randomUUID(), profiles: {}, active: null };
+    data = { key: random(), profiles: {}, active: null };
   }
+  // Earlier versions saved a bare UUID. Keep its value and add the required namespace.
+  if (!data.hostId?.startsWith('urn:uuid:')) data.hostId = 'urn:uuid:' + (data.hostId ?? randomUUID());
   let origin, pending, catalog, authMessage;
   let queue = Promise.resolve();
   const streams = new Set();
