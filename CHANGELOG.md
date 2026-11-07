@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Fixed in v0.1.3
+
+- Retry an empty OpenRouter stream once as a complete response from the same model. Distinguish empty, oversized, and filtered replies in the popup.
+
 ### Changed in v0.1.2
 
 - Migrate the previous OpenRouter free-router setting once to the fixed, free Gemma 4 model with reasoning disabled. Preserve the user's key, endpoint, privacy settings, and explicit model selections.

@@ -6,6 +6,7 @@ const MAX_RESPONSE_BYTES = 8_000_000;
 const MAX_TEXT_LENGTH = 2_000_000;
 
 class ProviderError extends Error {}
+export class EmptyCompletionError extends ProviderError {}
 
 export function httpError(status: number): Error {
   if ([401, 403].includes(status)) return new ProviderError('Provider denied access. Check the API key, endpoint permission, or local server allowed origins.');
@@ -21,17 +22,24 @@ interface CompletionPayload {
   choices?: { delta?: { content?: string }; message?: { content?: string }; finish_reason?: string }[];
 }
 
-function checkText(text: unknown): string {
-  if (typeof text !== 'string' || !text.trim() || text.length > MAX_TEXT_LENGTH) throw new ProviderError('Provider returned an empty or oversized response. Try another model.');
+function checkText(text: unknown, finishReason?: string): string {
+  if (finishReason === 'content_filter') throw new ProviderError('The AI provider filtered the response. Try fewer tabs or exclude sensitive sites in Settings.');
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new EmptyCompletionError(finishReason === 'length'
+      ? 'The AI provider hit its output limit before returning a grouping.'
+      : 'The AI provider finished without returning a grouping.');
+  }
+  if (text.length > MAX_TEXT_LENGTH) throw new ProviderError('Provider returned an oversized response. Try another model.');
   return text;
 }
 
 /** Collect only visible content, never reasoning or diagnostic payloads. */
 export async function readCompletion(response: Response, provider: ProviderKind, control?: AiControl): Promise<string> {
-  if (!response.body) throw new ProviderError('Provider returned an empty response. Try again or choose another model.');
+  if (!response.body) throw new EmptyCompletionError('The AI provider finished without returning a grouping.');
   const reader = response.body.getReader(), decoder = new TextDecoder();
   const streaming = response.headers.get('content-type')?.includes('text/event-stream');
   let buffer = '', output = '', bytes = 0, finished = false, lastReport = -Infinity, reportedCharacters = 0;
+  let finishReason: string | undefined;
 
   function event(frame: string): void {
     const data = frame.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).replace(/^ /, '')).join('\n');
@@ -43,6 +51,7 @@ export async function readCompletion(response: Response, provider: ProviderKind,
     if (payload.error) throw httpError(typeof payload.error.code === 'number' ? payload.error.code : 502);
     const choice = payload.choices?.[0];
     if (choice?.finish_reason === 'error') throw new ProviderError('The provider stopped while generating suggestions. Try again or choose another model.');
+    if (choice?.finish_reason) finishReason = choice.finish_reason;
     const text = choice?.delta?.content;
     if (typeof text === 'string') output += text;
     if (output.length > MAX_TEXT_LENGTH) throw new ProviderError('Provider returned an oversized response. Try another model.');
@@ -72,8 +81,9 @@ export async function readCompletion(response: Response, provider: ProviderKind,
     }
     if (streaming) {
       if (!finished && buffer.trim()) event(buffer);
-      return checkText(output);
+      return checkText(output, finishReason);
     }
+    if (!buffer.trim()) return checkText(buffer);
     let payload: CompletionPayload;
     try { payload = JSON.parse(buffer); } catch { throw new ProviderError('Provider returned an unreadable response. Check the endpoint and try again.'); }
     if (!payload || typeof payload !== 'object') throw new ProviderError('Provider returned an invalid response.');
@@ -81,7 +91,7 @@ export async function readCompletion(response: Response, provider: ProviderKind,
     const text = provider === 'anthropic'
       ? payload.content?.filter(x => x.type === 'text').map(x => x.text ?? '').join('')
       : provider === 'ollama' ? payload.message?.content : payload.choices?.[0]?.message?.content;
-    return checkText(text);
+    return checkText(text, payload.choices?.[0]?.finish_reason);
   } finally {
     await reader.cancel().catch(() => undefined);
     reader.releaseLock();

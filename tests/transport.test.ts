@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createProvider } from '../src/lib/providers';
+import { createProvider, validatedCall } from '../src/lib/providers';
 import { DEFAULTS } from '../src/lib/storage';
 import { HEADER_TIMEOUT_MS, readCompletion, RESPONSE_TIMEOUT_MS } from '../src/lib/transport';
 import { browserMock } from './mock';
@@ -34,7 +34,7 @@ describe('streamed provider responses', () => {
   it('maps mid-stream errors without exposing the provider payload', async () => {
     await expect(readCompletion(response(['data: {"error":{"code":429,"message":"private provider diagnostic"}}\n\n']), 'openai')).rejects.toThrow(/rate limit/);
     await expect(readCompletion(response(['data: broken-json\n\n']), 'openai')).rejects.toThrow(/unreadable/);
-    await expect(readCompletion(response([': heartbeat\n\ndata: [DONE]\n\n']), 'openai')).rejects.toThrow(/empty/);
+    await expect(readCompletion(response([': heartbeat\n\ndata: [DONE]\n\n']), 'openai')).rejects.toThrow(/without returning a grouping/);
   });
   it('still reads providers that return a complete JSON envelope', async () => {
     const payload = JSON.stringify({ choices: [{ message: { content: text } }] });
@@ -45,6 +45,36 @@ describe('streamed provider responses', () => {
     vi.stubGlobal('fetch', fetchMock);
     expect(await provider().complete('JSON only', 'Synthetic test tabs')).toBe(text);
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ model: 'openrouter/free', stream: true, reasoning: { effort: 'low', exclude: true } });
+  });
+});
+
+describe('empty OpenRouter responses', () => {
+  const empty = () => response(['data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n']);
+  const call = () => validatedCall(provider(), 'JSON only', {}, value => value);
+
+  it('retries an empty stream once with a complete response from the same model', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(empty()).mockResolvedValueOnce(
+      response([JSON.stringify({ choices: [{ message: { content: text } }] })], 'application/json'),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(call()).resolves.toEqual(JSON.parse(text));
+    expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body))).toMatchObject([
+      { model: 'openrouter/free', stream: true }, { model: 'openrouter/free', stream: false },
+    ]);
+  });
+
+  it('stops after one empty retry and names the known reason', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => empty());
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(call()).rejects.toThrow(/output limit.*retry did not recover/);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not make a second request when rate limited', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 429 }));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(call()).rejects.toThrow(/rate limit/);
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
 

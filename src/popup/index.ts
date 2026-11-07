@@ -35,7 +35,7 @@ async function run(fn: () => Promise<void>): Promise<void> {
 const stages: Record<AiJob['stage'], string> = {
   preparing: 'Preparing tab suggestions…', connecting: 'Connecting to the AI provider…',
   waiting: 'Connected. Waiting for the model to respond…', receiving: 'Receiving the model’s response…',
-  validating: 'Checking the response and building previews…', retrying: 'Retrying after an invalid response…',
+  validating: 'Checking the response and building previews…', retrying: 'Retrying after an empty or invalid response…',
 };
 function showAiProgress(job: AiJob): void {
   if (!activeAi || activeAi.cancelling) return;
