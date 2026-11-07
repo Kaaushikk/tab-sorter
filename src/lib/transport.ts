@@ -1,7 +1,7 @@
-import type { ProviderKind } from './types';
+import type { AiControl, ProviderKind } from './types';
 
 export const HEADER_TIMEOUT_MS = 25_000;
-export const RESPONSE_TIMEOUT_MS = 120_000;
+export const RESPONSE_TIMEOUT_MS = 60_000;
 const MAX_RESPONSE_BYTES = 8_000_000;
 const MAX_TEXT_LENGTH = 2_000_000;
 
@@ -27,11 +27,11 @@ function checkText(text: unknown): string {
 }
 
 /** Collect only visible content, never reasoning or diagnostic payloads. */
-export async function readCompletion(response: Response, provider: ProviderKind): Promise<string> {
+export async function readCompletion(response: Response, provider: ProviderKind, control?: AiControl): Promise<string> {
   if (!response.body) throw new ProviderError('Provider returned an empty response. Try again or choose another model.');
   const reader = response.body.getReader(), decoder = new TextDecoder();
   const streaming = response.headers.get('content-type')?.includes('text/event-stream');
-  let buffer = '', output = '', bytes = 0, finished = false;
+  let buffer = '', output = '', bytes = 0, finished = false, lastReport = -Infinity, reportedCharacters = 0;
 
   function event(frame: string): void {
     const data = frame.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).replace(/^ /, '')).join('\n');
@@ -50,6 +50,7 @@ export async function readCompletion(response: Response, provider: ProviderKind)
 
   try {
     while (!finished) {
+      control?.signal.throwIfAborted();
       const { done, value } = await reader.read();
       if (done) { buffer += decoder.decode(); break; }
       bytes += value.byteLength;
@@ -62,6 +63,11 @@ export async function readCompletion(response: Response, provider: ProviderKind)
           buffer = buffer.slice(boundary.index + boundary[0].length);
           event(frame);
         }
+      }
+      const characters = streaming ? output.length : buffer.length;
+      if (characters > reportedCharacters && (finished || Date.now() - lastReport >= 750)) {
+        reportedCharacters = characters; lastReport = Date.now();
+        await control?.report({ stage: 'receiving', characters });
       }
     }
     if (streaming) {
@@ -83,21 +89,28 @@ export async function readCompletion(response: Response, provider: ProviderKind)
 }
 
 /** Separate a short connection deadline from a longer generation deadline. */
-export async function requestCompletion(url: string, headers: Record<string, string>, body: object, provider: ProviderKind): Promise<string> {
+export async function requestCompletion(url: string, headers: Record<string, string>, body: object, provider: ProviderKind, control?: AiControl): Promise<string> {
   const controller = new AbortController();
+  const signal = control ? AbortSignal.any([controller.signal, control.signal]) : controller.signal;
   const connectionTimer = setTimeout(() => controller.abort(new DOMException('Connection deadline', 'TimeoutError')), HEADER_TIMEOUT_MS);
   const responseTimer = setTimeout(() => controller.abort(new DOMException('Generation deadline', 'TimeoutError')), RESPONSE_TIMEOUT_MS);
   // Only while this bounded request is active: extension API activity protects
   // streamed generation from the MV3 idle timer. No permanent background polling.
   const activity = setInterval(() => { void chrome.storage.session.get('epoch').catch(() => undefined); }, 15_000);
+  let receivedHeaders = false;
   try {
-    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'omit', redirect: 'error', signal: controller.signal });
+    await control?.report({ stage: 'connecting', characters: 0 });
+    signal.throwIfAborted();
+    const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'omit', redirect: 'error', signal });
+    receivedHeaders = true;
     clearTimeout(connectionTimer);
     if (!response.ok) { await response.body?.cancel().catch(() => undefined); throw httpError(response.status); }
-    return await readCompletion(response, provider);
+    await control?.report({ stage: 'waiting' });
+    return await readCompletion(response, provider, control);
   } catch (error) {
+    if (control?.signal.aborted) throw control.signal.reason;
     if (controller.signal.aborted || (error instanceof Error && ['AbortError', 'TimeoutError'].includes(error.name))) {
-      throw new Error('The AI provider took too long to respond. No tabs were changed. Try again shortly or choose a faster model; free endpoints can be busy.');
+      throw new Error(`The AI provider took too long to respond. ${receivedHeaders ? 'The response did not finish within 60 seconds.' : 'The provider did not start a response within 25 seconds.'} No tabs were changed. Try again shortly or choose another model.`);
     }
     if (error instanceof ProviderError) throw error;
     throw new Error('Provider connection failed or was interrupted. Check the endpoint, network, and local server origin settings, then try again.');

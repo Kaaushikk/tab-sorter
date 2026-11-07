@@ -2,7 +2,7 @@
 
 Organize one browser window into native tab groups. Choose a local strategy, ask your own AI provider for ideas, or describe the groups you want in plain English. Preview every plan before applying it.
 
-**Status:** v0.1.1 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and successful live provider checks are pending; see [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md). This is not a Chrome Web Store publication.
+**Status:** v0.1.2 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and successful live provider checks are pending; see [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md). This is not a Chrome Web Store publication.
 
 <!-- Demo GIF placeholder: replace with docs/assets/demo.gif after recording synthetic test tabs. -->
 **Demo GIF:** coming after browser validation. Do not record personal tabs or API keys.
@@ -70,19 +70,19 @@ Open Settings with the gear button. Choose a provider, enter its exact model ID 
 
 Use your own Anthropic key and an available model ID from your account. Requests go directly to `https://api.anthropic.com/v1/messages`, including the required `anthropic-dangerous-direct-browser-access: true` header. Some organization policies disallow direct browser calls even with a valid key; see [Anthropic authentication](https://platform.claude.com/docs/en/manage-claude/authentication).
 
-### OpenAI-compatible
+### Custom AI provider
 
 Enter a base URL, typically `https://api.openai.com/v1`, a key, and a model ID supported by that server. Tab Sorter appends `/chat/completions`, enables streaming, and requests `response_format: {type: "json_object"}`. It also accepts a complete JSON response if the server ignores streaming. The endpoint must support Chat Completions and JSON mode. Remote endpoints require HTTPS. Redirects and URL-embedded credentials are rejected. Custom paths such as `https://host.example/api/v1` are supported.
 
-For an OpenRouter free trial, choose the custom/OpenAI-compatible provider, set the base URL to `https://openrouter.ai/api/v1`, the model to `openrouter/free`, and use your OpenRouter key. Allow endpoint access and Save. The extension preserves that model selection and does not switch to a paid model. Free availability and rate limits are controlled by OpenRouter. Its requests use low reasoning effort where supported. The extension accepts streaming comments/heartbeats, excludes hidden reasoning from the plan, and validates the final JSON before previewing it.
+For an OpenRouter free trial, choose **Custom AI provider**, set the base URL to `https://openrouter.ai/api/v1`, click **Use free Gemma 4** (model ID `google/gemma-4-26b-a4b-it:free`), and use your OpenRouter key. Allow endpoint access and Save. Version 0.1.2 moves existing `openrouter/free` settings to this fixed model once, retaining the key and other preferences. Gemma 4 runs with reasoning disabled for this task. The model remains editable and the extension does not switch to paid models. Free availability and rate limits are controlled by OpenRouter. See the [free Gemma 4 listing](https://openrouter.ai/google/gemma-4-26b-a4b-it:free).
 
 ### Ollama
 
-Use `http://localhost:11434` and the name of a locally installed model. No API key is sent. Requests use `/api/chat`, non-streaming responses, and JSON format. Providers must send response headers within 25 seconds; the whole response has a two-minute deadline. A cold model can exceed the connection deadline; warm it locally before retrying.
+Use `http://localhost:11434` and the name of a locally installed model. No API key is sent. Requests use `/api/chat`, non-streaming responses, and JSON format. Providers must send response headers within 25 seconds; the whole response has a 60-second deadline. A cold model can exceed the connection deadline; warm it locally before retrying.
 
 Ollama may require its `OLLAMA_ORIGINS` environment setting to allow the extension origin, such as `chrome-extension://YOUR_EXTENSION_ID`. Set it through your normal OS configuration, then restart Ollama. Find the ID on the browser's extensions page. Chrome and Brave unpacked IDs may differ, so allow each actual origin. Prefer specific origins over allowing every extension. See the [official Ollama FAQ](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama).
 
-The usual suggestion request is one call returning 3–5 candidate strategies; unhelpful and duplicate plans are filtered. Windows over 150 eligible tabs use sequential batches with shared group names and stable strategy IDs. One malformed JSON response is retried once per batch. Local strategies always remain available when AI fails.
+The usual suggestion request asks for three compact candidate strategies; unhelpful and duplicate plans are filtered. Windows over 150 eligible tabs use sequential batches with shared group names and stable strategy IDs. One malformed JSON response is retried once per batch. The popup shows the current stage and elapsed time, including retries. **Cancel request** stops reading the provider response and leaves tabs unchanged. Closing the popup keeps the current request active; reopen it to see progress. Local strategies always remain available when AI fails.
 
 ## What data leaves your browser?
 
@@ -110,7 +110,7 @@ No difference has been confirmed by manual testing in this environment. Brave's 
 | Remote API and Ollama | Request-format/privacy tests pass; live pending | Request-format/privacy tests pass; live pending | Not recorded |
 | Shields on / vertical tabs | Not applicable | Manual test pending | Not recorded |
 
-Browser automation stopped before extension installation because it could not reliably determine the current URL. User-provided screenshots on November 6, 2026 confirm the settings and popup load and display 16 tabs with local content-type groups; an OpenRouter suggestion attempt in v0.1.0 timed out. Version 0.1.1 addresses that transport error with streaming and regression tests; its live retry remains pending. This table intentionally records no completed manual certification runs. Execute [the checklist](docs/MANUAL_TESTS.md) on the latest stable versions and record exact versions and results before publishing.
+Browser automation stopped before extension installation because it could not reliably determine the current URL. User-provided screenshots on November 6, 2026 confirm the settings and popup load and display 16 tabs with local content-type groups; an OpenRouter suggestion attempt in v0.1.0 timed out and the v0.1.1 free-router request was slow. Version 0.1.2 uses a fixed free model, reduces the requested output, and adds progress/cancellation regression tests. Its live retry remains pending. This table intentionally records no completed manual certification runs. Execute [the checklist](docs/MANUAL_TESTS.md) on the latest stable versions and record exact versions and results before publishing.
 
 ### Troubleshooting
 
@@ -119,7 +119,7 @@ Browser automation stopped before extension installation because it could not re
 - **401/403:** check the key and provider account restrictions. With Ollama, check allowed origins and restart its server.
 - **Network failure / Brave:** first verify endpoint access, HTTPS URL, local server availability, and origin configuration. Test a per-site Shields adjustment only if a reproducible issue demonstrates it is needed; record the exact issue, browser version, and minimal change. No Shields exception has been verified as necessary.
 - **Invalid JSON:** try a model that supports structured JSON. The extension retries malformed output once and leaves tabs unchanged if validation still fails.
-- **AI timeout:** response headers have a 25-second deadline and generation has a two-minute total deadline per request. Streaming providers can send progress while the model works. Request-scoped extension API activity keeps the worker from idling during generation; it stops as soon as the request completes or fails. A busy free provider may still time out. Wait before retrying or select another available free model; the extension never silently selects a paid model. The message applies to timeout during connection or body reading. Reopen the popup if it was closed while waiting.
+- **AI timeout:** response headers have a 25-second deadline and each request has a 60-second total deadline. A busy free provider may still time out. Use **Cancel request**, try again later, or select another available free model. If the popup was closed, reopen it to check the active request or its preview.
 - **Popup closed during an operation:** reopen it. Preview data lives in session storage, undo checkpoints in local storage. An interrupted apply appears in history; check it before retrying. A browser termination between an API mutation and its checkpoint can leave only a partial record; review the live groups.
 - **Stale preview:** reopen the popup and select a fresh plan after changing tabs or settings.
 - **Restart undo missing:** restore the original browser session's tabs first; duplicate URLs or indistinguishable old windows prevent automatic matching.
@@ -131,7 +131,7 @@ npm ci
 npm run check       # ESLint, Vitest, TypeScript, Vite production build
 npm run dev         # rebuild on edits; reload the extension manually
 npm run test:watch
-npm run package     # artifacts/tab-sorter-0.1.1.zip (manifest at archive root)
+npm run package     # artifacts/tab-sorter-0.1.2.zip (manifest at archive root)
 node scripts/icons.mjs
 ```
 

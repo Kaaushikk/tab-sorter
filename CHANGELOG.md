@@ -4,10 +4,18 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.1.2
+
+- Migrate the previous OpenRouter free-router setting once to the fixed, free Gemma 4 model with reasoning disabled. Preserve the user's key, endpoint, privacy settings, and explicit model selections.
+- Request three compact AI plans rather than asking the model to repeat local website/content-type plans.
+- Show connection, waiting, receiving, validation and retry stages, elapsed time, and the selected model. Reopening the popup can resume monitoring an active request.
+- Cancel requests from the popup without changing tabs; limit each provider request to 60 seconds and distinguish connection timeouts from incomplete responses.
+- Rename the custom provider option and add a **Use free Gemma 4** shortcut for OpenRouter setups.
+
 ### Fixed
 
 - Stream responses from custom AI providers so slow free endpoints can start responding without waiting for the entire plan.
-- Separate the 25-second connection deadline from a two-minute generation deadline, with bounded service-worker activity only while a request is active.
+- Separate the connection and generation deadlines, with bounded service-worker activity only while a request is active.
 - Catch body-read timeouts and interrupted streams; show actionable errors instead of raw "signal timed out" messages.
 - Explain the AI wait in the popup and preserve the user's selected free model.
 

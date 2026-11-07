@@ -2,7 +2,7 @@
 
 Use separate browser test profiles and synthetic tabs. Run on Windows 11 with the latest stable Chrome and Brave. Record exact versions from the browser's About page before running. Automated mock tests do not substitute for these results.
 
-**Current result:** incomplete personal trial. Browser automation stopped before installation because the active URL could not be identified confidently. User screenshots on November 6, 2026 confirm settings/popup loading and a local preview covering 16 tabs. The v0.1.0 OpenRouter suggestion attempt failed with "signal timed out"; v0.1.1 adds streamed responses, bounded generation time, and regression tests. Retesting the live request, native Apply/Undo, restart recovery, and both-browser compatibility is still pending. No live provider success is claimed.
+**Current result:** incomplete personal trial. Browser automation stopped before installation because the active URL could not be identified confidently. User screenshots on November 6, 2026 confirm settings/popup loading and a local preview covering 16 tabs. The v0.1.0 OpenRouter attempt timed out and the v0.1.1 free-router request was slow. Version 0.1.2 adds a fixed free Gemma 4 model, progress, and cancellation. Retesting the live request, native Apply/Undo, restart recovery, and both-browser compatibility is still pending. No live provider success is claimed.
 
 ## Stage 1: local grouping and undo
 
@@ -25,6 +25,7 @@ Record Stage 1 in both browsers before declaring this stage manually verified.
 2. Suggest: verify normally one call, candidate variety, local fallback, and previews. Refine a selected strategy. Run a custom instruction and “group by website” (the latter must make no network call).
 3. Test invalid key, offline server, rate limiting if available, and malformed model JSON. Verify one JSON retry, helpful errors, unchanged tabs, and local cards still usable.
 4. Use 151+ synthetic tabs and verify batches preserve consistent names and each eligible tab appears at most once per strategy. Do not incur unexpected provider costs without the account owner's agreement.
+5. Test the fixed free Gemma 4 model with a small window. Check that the popup shows the model, elapsed time, and the current phase; close/reopen it while a request is pending. Cancel a request and verify it leaves tabs and existing previews unchanged.
 
 ## Stage 3: controls and privacy
 

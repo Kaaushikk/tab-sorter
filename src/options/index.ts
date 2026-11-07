@@ -1,6 +1,6 @@
 import '../style.css';
 import { button, el, field } from '../lib/ui';
-import { clearUndo, DEFAULTS, saveSettings, settings } from '../lib/storage';
+import { clearUndo, DEFAULTS, FAST_OPENROUTER_MODEL, isOpenRouter, saveSettings, settings } from '../lib/storage';
 import { endpointOrigin } from '../lib/sanitize';
 import type { Settings } from '../lib/types';
 
@@ -9,6 +9,7 @@ const status = el('div', undefined, 'status'); status.role = 'status'; status.se
 const form = el('form'), provider = el('select'), base = el('input'), model = el('input'), key = el('input'), domains = el('textarea');
 const titles = el('input'), pinned = el('input'), mergeDomains = el('input'), existing = el('select'), unassigned = el('select');
 const notice = el('div', undefined, 'notice');
+const fastModel = button('Use free Gemma 4', () => { model.value = FAST_OPENROUTER_MODEL; message('Free Gemma 4 selected. Click Save settings to use it.'); });
 let value: Settings;
 function options(select: HTMLSelectElement, items: [string, string][]): void { for (const [v,label] of items) { const o = el('option', label); o.value = v; select.append(o); } }
 function check(label: string, input: HTMLInputElement): HTMLLabelElement { input.type = 'checkbox'; const l = el('label', undefined, 'field check'); l.append(input, el('span', label)); return l; }
@@ -16,6 +17,7 @@ function message(text: string, error = false): void { status.hidden = false; sta
 function updateNotice(): void {
   const local = provider.value === 'none';
   base.disabled = local || provider.value === 'anthropic'; model.disabled = local; key.disabled = local || provider.value === 'ollama';
+  fastModel.hidden = !isOpenRouter({ provider: provider.value as Settings['provider'], baseUrl: base.value.trim() });
   const data = titles.checked ? 'tab IDs and titles' : 'tab IDs, titles, hostnames, URL paths, and locally inferred content types';
   notice.textContent = local ? 'Local mode: no tab data leaves your browser. Website and content-type strategies work entirely on this device.' : `Only when you request AI: ${data}, your instruction, and eligible preview group names/IDs go directly to ${provider.value === 'anthropic' ? 'Anthropic (api.anthropic.com)' : base.value || 'your endpoint'}. Query strings, fragments, URL credentials, excluded domains, incognito tabs, and browser pages are omitted. Provider retention policies apply. Your key stays in this browser profile; it is sent only to authenticate with that provider. No Tab Sorter backend or analytics.`;
 }
@@ -25,13 +27,13 @@ function read(): Settings {
 async function init(): Promise<void> {
   value = await settings();
   app.append(el('h1', 'Tab Sorter settings'), el('p', 'Your window. Your groups. Your choice of AI.', 'muted'));
-  options(provider, [['none','Local only · no network'],['anthropic','Anthropic'],['openai','OpenAI-compatible endpoint'],['ollama','Local Ollama']]);
+  options(provider, [['none','Local only · no network'],['anthropic','Anthropic'],['openai','Custom AI provider'],['ollama','Local Ollama']]);
   options(existing, [['keep','Keep existing groups untouched'],['merge','Merge into a matching name and color'],['dissolve','Dissolve participating groups first']]);
   options(unassigned, [['other','Put eligible unassigned AI tabs in Other'],['ungrouped','Leave unassigned tabs unchanged']]);
   provider.value = value.provider; base.value = value.baseUrl; model.value = value.model; key.value = value.apiKey; key.type = 'password'; key.autocomplete = 'off'; key.spellcheck = false;
   titles.checked = value.titlesOnly; pinned.checked = value.includePinned; mergeDomains.checked = value.mergeSubdomains; existing.value = value.existingGroups; unassigned.value = value.unassigned;
   domains.value = value.excludedDomains.join('\n'); domains.placeholder = 'mail.google.com\nbank.example'; model.placeholder = 'Exact model ID from your provider';
-  const ai = el('section'); ai.append(el('h2', 'AI provider'), field('Provider', provider), field('Base URL', base, 'OpenAI-compatible: include /v1 when required. Ollama: http://localhost:11434. HTTPS required for remote endpoints.'), field('Model', model), field('API key', key, 'Stored in chrome.storage.local only. Not synced. Local storage is not encrypted.'), notice);
+  const ai = el('section'); ai.append(el('h2', 'AI provider'), field('Provider', provider), field('Base URL', base, 'Custom provider (for example, OpenRouter): use its Chat Completions base URL. Ollama: http://localhost:11434.'), field('Model', model), fastModel, field('API key', key, 'Stored in chrome.storage.local only. Not synced. Local storage is not encrypted.'), notice);
   const allow = button('Allow endpoint access', async () => {
     try {
       const draft = read(); if (draft.provider === 'none') { message('Local mode needs no endpoint access.'); return; }

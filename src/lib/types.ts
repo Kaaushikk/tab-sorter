@@ -21,13 +21,21 @@ export interface Snapshot {
 }
 export interface WindowState { windowId: number; tabs: Tab[]; groups: Group[]; strategies: Strategy[]; snapshots: Snapshot[]; settings: Omit<Settings, 'apiKey'>; notice?: string }
 export interface Result { restored: number; skipped: number; message: string }
+export type AiStage = 'preparing' | 'connecting' | 'waiting' | 'receiving' | 'validating' | 'retrying';
+export interface AiProgress { stage?: AiStage; attempt?: number; batch?: number; batches?: number; characters?: number }
+export interface AiControl { signal: AbortSignal; report(progress: AiProgress): Promise<void> | void }
+export interface AiJob extends AiProgress {
+  id: string; model: string; startedAt: number; updatedAt: number; stage: AiStage;
+  status: 'running' | 'succeeded' | 'failed' | 'cancelled'; error?: string; selectedId?: string;
+}
+export type AiCommand = ({ type: 'suggest' } | { type: 'custom'; instruction: string } | { type: 'refine'; strategy: Strategy; instruction: string }) & { windowId: number; requestId?: string };
 export type Command =
   | { type: 'load'; windowId: number }
-  | { type: 'suggest'; windowId: number }
+  | AiCommand
+  | { type: 'aiStatus'; windowId: number }
+  | { type: 'cancelAi'; windowId: number; requestId: string }
   | { type: 'ungroupAll'; windowId: number }
   | { type: 'collapseAll'; windowId: number }
-  | { type: 'custom'; windowId: number; instruction: string }
-  | { type: 'refine'; windowId: number; strategy: Strategy; instruction: string }
   | { type: 'apply'; windowId: number; strategy: Strategy }
   | { type: 'undo'; windowId: number; snapshotId: string; groupId?: number }
   | { type: 'groupAction'; windowId: number; groupId: number; action: 'ungroup' | 'toggle' };

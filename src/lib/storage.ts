@@ -5,11 +5,22 @@ export const DEFAULTS: Settings = {
   titlesOnly: false, excludedDomains: [], includePinned: false,
   existingGroups: 'keep', unassigned: 'other', mergeSubdomains: false, presets: [],
 };
+export const FAST_OPENROUTER_MODEL = 'google/gemma-4-26b-a4b-it:free';
+export function isOpenRouter(s: Pick<Settings, 'provider' | 'baseUrl'>): boolean {
+  try { return s.provider === 'openai' && new URL(s.baseUrl).hostname === 'openrouter.ai'; }
+  catch { return false; }
+}
 export async function settings(): Promise<Settings> {
   const data = await chrome.storage.local.get('settings');
-  return { ...DEFAULTS, ...(data.settings as Partial<Settings> | undefined) };
+  const value = { ...DEFAULTS, ...(data.settings as Partial<Settings> | undefined) };
+  // Upgrade only the old free-router choice, once. Explicit models are preserved.
+  if (isOpenRouter(value) && value.model === 'openrouter/free' && !(await chrome.storage.local.get('freeModelMigrated')).freeModelMigrated) {
+    value.model = FAST_OPENROUTER_MODEL;
+    await chrome.storage.local.set({ settings: value, freeModelMigrated: true });
+  }
+  return value;
 }
-export async function saveSettings(value: Settings): Promise<void> { await chrome.storage.local.set({ settings: value }); }
+export async function saveSettings(value: Settings): Promise<void> { await chrome.storage.local.set({ settings: value, freeModelMigrated: true }); }
 export async function epoch(): Promise<string> {
   const data = await chrome.storage.session.get('epoch');
   if (typeof data.epoch === 'string') return data.epoch;

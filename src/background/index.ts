@@ -5,6 +5,7 @@ import { frequency, settings, snapshots } from '../lib/storage';
 import { applyPlan, beginSnapshot, checkpoint, recoverWindow, undoSnapshot } from '../lib/undo';
 import { validatePlan } from '../lib/validation';
 import { aiTabs } from '../lib/sanitize';
+import { aiStatus, cancelAi, clearAiWindow, runAiJob } from '../lib/ai-jobs';
 import type { Command, Response, Strategy, WindowState } from '../lib/types';
 
 async function load(windowId: number): Promise<WindowState> {
@@ -29,12 +30,17 @@ async function load(windowId: number): Promise<WindowState> {
 async function execute(c: Command): Promise<unknown> {
   const windowId = c.windowId;
   if (c.type === 'load') return load(windowId);
+  if (c.type === 'aiStatus') return (await aiStatus(windowId)) ?? null;
+  if (c.type === 'cancelAi') return { cancelled: await cancelAi(windowId, c.requestId) };
   const current = await readWindow(windowId), s = await settings();
   if (c.type === 'suggest' || c.type === 'custom' || c.type === 'refine') {
-    const result = c.type === 'suggest' ? await suggest(current.tabs, s) : [await customPlan(current.tabs, s, c.instruction, c.type === 'refine' ? c.strategy : undefined)];
-    const strategies = c.type === 'suggest' ? result : [...(await load(windowId)).strategies.filter(x => x.id.startsWith('ai:') && x.id !== result[0].id), ...result];
-    await chrome.storage.session.set({ [`preview:${windowId}`]: { strategies, tabs: current.tabs, updatedAt: Date.now() } });
-    return { state: await load(windowId), selectedId: c.type === 'suggest' ? undefined : result[0].id };
+    return runAiJob(windowId, c.requestId ?? crypto.randomUUID(), s.model, async (control, publish) => {
+      const result = c.type === 'suggest' ? await suggest(current.tabs, s, control) : [await customPlan(current.tabs, s, c.instruction, c.type === 'refine' ? c.strategy : undefined, control)];
+      const strategies = c.type === 'suggest' ? result : [...(await load(windowId)).strategies.filter(x => x.id.startsWith('ai:') && x.id !== result[0].id), ...result];
+      publish(); // Once results are ready to store, cancellation cannot discard them halfway through.
+      await chrome.storage.session.set({ [`preview:${windowId}`]: { strategies, tabs: current.tabs, updatedAt: Date.now() } });
+      return { state: await load(windowId), selectedId: c.type === 'suggest' ? undefined : result[0].id };
+    });
   }
   if (c.type === 'apply') {
     const eligibleTabs = eligible(current.tabs, s);
@@ -74,19 +80,24 @@ async function execute(c: Command): Promise<unknown> {
   return { message: c.action === 'toggle' ? 'Group updated.' : 'Group ungrouped. Restore it from Undo history.' };
 }
 
-// Only the queue is in memory. All user state and operation checkpoints are in storage.
-let queue: Promise<unknown> = Promise.resolve();
+// Serialize operations per window; progress and cancellation never wait behind fetch.
+const queues = new Map<number, Promise<unknown>>();
 chrome.runtime.onMessage.addListener((c: Command, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL('')) || !c || !Number.isInteger(c.windowId) || c.windowId < 0) return false;
   const run = async () => {
     try { const value = await execute(c); sendResponse({ ok: true, value } satisfies Response<unknown>); }
     catch (e) { sendResponse({ ok: false, error: e instanceof Error ? e.message : 'The operation failed. Refresh and try again.' } satisfies Response<unknown>); }
   };
-  queue = queue.then(run, run); return true;
+  if (c.type === 'aiStatus' || c.type === 'cancelAi') { void run(); return true; }
+  const previous = queues.get(c.windowId) ?? Promise.resolve();
+  const pending = previous.then(run, run); queues.set(c.windowId, pending);
+  void pending.finally(() => { if (queues.get(c.windowId) === pending) queues.delete(c.windowId); });
+  return true;
 });
 chrome.windows.onRemoved.addListener(windowId => {
   void (async () => {
-    await chrome.storage.session.remove(`preview:${windowId}`);
+    await clearAiWindow(windowId);
+    await chrome.storage.session.remove([`preview:${windowId}`, `seen:${windowId}`]);
     const history = await snapshots(windowId);
     if (history.length) await chrome.storage.local.set({ [`undo:${windowId}`]: history.map(s => ({ ...s, closedAt: Date.now() })) });
   })();
