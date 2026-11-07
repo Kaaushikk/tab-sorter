@@ -140,10 +140,13 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
       if (!list.some(item => item.id === model)) throw new BridgeError(400, 'Choose an available ChatGPT model in Tab Sorter settings.');
       const response = await fetcher(API + '/responses', {
         method: 'POST', redirect: 'error', signal: controller.signal,
-        headers: { Authorization: 'Bearer ' + current.accessToken, 'Content-Type': 'application/json' },
+        headers: { Authorization: 'Bearer ' + current.accessToken, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({ model, instructions, input: [{ role: 'user', content: input }], store: false, stream: true }),
       });
-      if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+      // ChatGPT plan inference can stream valid events without a Content-Type header.
+      // The extension still requires a completed Responses event before using the output.
+      const contentType = response.headers.get('content-type');
+      if (!response.ok || !response.body || (contentType && !contentType.toLowerCase().includes('text/event-stream'))) {
         await response.body?.cancel();
         throw upstreamError(response.status);
       }

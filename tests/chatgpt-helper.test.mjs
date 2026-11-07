@@ -37,11 +37,13 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
     }
     expect(url).toBe('https://api.openai.com/v1/responses');
     expect(options.headers.Authorization).toBe('Bearer fake-access');
+    expect(options.headers.Accept).toBe('text/event-stream');
     expect(JSON.parse(options.body)).toEqual({
       model: 'test-model', instructions: 'Return grouping JSON', input: [{ role: 'user', content: 'Synthetic tabs' }],
       store: false, stream: true,
     });
-    return new globalThis.Response('data: {"type":"response.completed"}\n\n', { headers: { 'Content-Type': 'text/event-stream' } });
+    // The live plan endpoint can omit Content-Type even when returning SSE.
+    return new globalThis.Response(Buffer.from('data: {"type":"response.completed"}\n\n'));
   });
   const { origin, key, server } = await startHelper({ directory, port: 0, fetcher });
   const request = (path, options = {}) => globalThis.fetch(origin + path, {
@@ -85,6 +87,7 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
       body: JSON.stringify({ model: 'test-model', instructions: 'Return grouping JSON', input: 'Synthetic tabs', store: true }),
     });
     expect(result.status).toBe(200);
+    expect(result.headers.get('content-type')).toBe('text/event-stream');
     expect(await result.text()).toContain('response.completed');
     expect(await (await request('/signout', { method: 'POST' })).json()).toEqual({ revoked: true });
     expect(await readFile(join(directory, 'chatgpt.json'), 'utf8')).not.toMatch(/fake-access|fake-refresh/);

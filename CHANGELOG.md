@@ -7,6 +7,7 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 ### Fixed
 
 - Add the required UUID namespace to the ChatGPT helper's host ID. Restarting the helper upgrades existing IDs and preserves the pairing code.
+- Forward ChatGPT plan responses when OpenAI streams events without a content type. The extension still checks that the response completed.
 
 ### Fixed in v0.2.1
 
