@@ -36,3 +36,17 @@ it('drops AI preview plans when their tabs have changed',async()=>{
   mock.tabs[0].url='https://changed.example';expect((await send<WindowState>({type:'load',windowId:1})).strategies).toHaveLength(2);
 });
 it('does not accept messages from a website',()=>{expect(listener({type:'load',windowId:1},{id:'other',url:'https://malicious.example'},()=>{})).toBe(false);expect(mock.api.tabs.query).not.toHaveBeenCalled();});
+it('returns streamed suggestions through the background without grouping any tabs',async()=>{
+  mock.local.settings={...DEFAULTS,provider:'openai',baseUrl:'https://openrouter.ai/api/v1',model:'openrouter/free',apiKey:'test-placeholder'};
+  const strategies=[[1,2],[1,3],[2,3]].map((pair,i)=>({id:`strategy-${i}`,label:`Strategy ${i}`,description:'Synthetic test grouping',groups:[{name:'Related',color:'blue',tabIds:pair},{name:'Other',color:'grey',tabIds:[1,2,3].filter(id=>!pair.includes(id))}]}));
+  const output=JSON.stringify({strategies});const wire=': OPENROUTER PROCESSING\n\ndata: '+JSON.stringify({choices:[{delta:{content:output}}]})+'\n\ndata: [DONE]\n\n';
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(wire,{headers:{'content-type':'text/event-stream'}})));
+  const result=await send<{state:WindowState}>({type:'suggest',windowId:1});expect(result.state.strategies.filter(s=>s.id.startsWith('ai:'))).toHaveLength(3);
+  expect(mock.api.tabs.group).not.toHaveBeenCalled();expect(mock.api.tabs.ungroup).not.toHaveBeenCalled();expect(mock.tabs.every(t=>t.groupId===-1)).toBe(true);
+});
+it('reports body-read timeouts clearly and leaves tabs unchanged',async()=>{
+  mock.local.settings={...DEFAULTS,provider:'openai',baseUrl:'https://openrouter.ai/api/v1',model:'openrouter/free',apiKey:'test-placeholder'};
+  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(new ReadableStream({start(controller){controller.error(new DOMException('signal timed out','TimeoutError'));}}))));
+  await expect(send({type:'suggest',windowId:1})).rejects.toThrow(/AI provider took too long/);
+  expect(mock.api.tabs.group).not.toHaveBeenCalled();expect(mock.api.tabs.ungroup).not.toHaveBeenCalled();
+});

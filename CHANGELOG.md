@@ -4,6 +4,13 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Fixed
+
+- Stream responses from custom AI providers so slow free endpoints can start responding without waiting for the entire plan.
+- Separate the 25-second connection deadline from a two-minute generation deadline, with bounded service-worker activity only while a request is active.
+- Catch body-read timeouts and interrupted streams; show actionable errors instead of raw "signal timed out" messages.
+- Explain the AI wait in the popup and preserve the user's selected free model.
+
 ### Added
 
 - Manifest V3 extension for local website/content-type grouping in the popup's window.

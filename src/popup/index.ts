@@ -19,8 +19,8 @@ async function send<T>(command: Command): Promise<T> {
 }
 function show(message: string, error = false): void { status.hidden = false; status.textContent = message; status.className = `status${error ? ' error' : ''}`; }
 function locks(): void { root.querySelectorAll('button,input,textarea').forEach(n => { (n as HTMLButtonElement).disabled = busy; }); apply.disabled = busy || !selected?.groups.length; root.setAttribute('aria-busy', String(busy)); }
-async function run(fn: () => Promise<void>): Promise<void> {
-  if (busy) return; busy = true; locks(); show('Working on this window…');
+async function run(fn: () => Promise<void>, pendingMessage = 'Working on this window…'): Promise<void> {
+  if (busy) return; busy = true; locks(); show(pendingMessage);
   try { await fn(); } catch (e) { show(e instanceof Error ? e.message : 'Something went wrong.', true); }
   finally { busy = false; locks(); }
 }
@@ -87,7 +87,7 @@ async function custom(): Promise<void> {
   await run(async () => {
     const result = await send<{state:WindowState;selectedId:string}>({ type: 'custom', windowId, instruction: instruction.value });
     state = result.state; selected = state.strategies.find(s => s.id === result.selectedId); renderStrategies(); show('Preview ready. Review the groups before applying.');
-  });
+  }, 'Asking your AI provider… This can take up to 2 minutes per request.');
 }
 async function init(): Promise<void> {
   const current = await chrome.windows.getCurrent({ populate: false });
@@ -97,14 +97,14 @@ async function init(): Promise<void> {
   const settings = button('⚙', () => chrome.runtime.openOptionsPage(), 'icon-button'); settings.setAttribute('aria-label', 'Open settings'); header.append(brand, settings);
   const suggest = button('✦ Suggest groupings', () => run(async () => {
     const result = await send<{state:WindowState}>({ type: 'suggest', windowId }); state = result.state; renderStrategies(); show('Suggestions ready. Choose a strategy to preview.');
-  }), 'primary wide');
+  }, 'Asking your AI provider… This can take up to 2 minutes per request.'), 'primary wide');
   const customLabel = el('label', 'Or tell me how to group your tabs', 'muted'); customLabel.htmlFor = 'instruction'; instruction.id = 'instruction';
   const customBox = el('div', undefined, 'stack'); customBox.append(customLabel, instruction, button('Preview instruction', custom), presets);
   refinement.append(refine, button('Refine preview', () => run(async () => {
     if (!selected) return;
     const result = await send<{state:WindowState;selectedId:string}>({ type: 'refine', windowId, strategy: selected, instruction: refine.value });
     state = result.state; selected = state.strategies.find(s => s.id === result.selectedId); renderStrategies(); refine.value = ''; show('Refined preview ready.');
-  })));
+  }, 'Asking your AI provider to refine the preview… This can take up to 2 minutes per request.')));
   const tools = el('div', undefined, 'row');
   tools.append(button('Ungroup all', () => run(async () => { const r = await send<{message:string}>({ type: 'ungroupAll', windowId }); show(r.message); await reload(); })), button('Collapse all groups', () => run(async () => { await send({ type: 'collapseAll', windowId }); await reload(); show('Groups collapsed.'); })));
   const toolbar = el('div', undefined, 'toolbar row'); toolbar.append(button('Cancel', () => { selected = undefined; renderStrategies(); status.hidden = true; }), apply);

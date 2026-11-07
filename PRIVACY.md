@@ -1,6 +1,6 @@
 # Tab Sorter Privacy Policy
 
-Effective November 5, 2026. Applies to the Tab Sorter browser extension, version 0.1.0.
+Effective November 5, 2026. Applies to the Tab Sorter browser extension, versions 0.1.x.
 
 ## No backend, analytics, or tracking
 
