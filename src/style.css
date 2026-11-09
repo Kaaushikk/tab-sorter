@@ -34,6 +34,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .status { font-size: 12px; padding: 10px; border-radius: 8px; background: var(--tint); margin: 10px 0; overflow-wrap: anywhere; } .status.error { color: var(--error); border: 1px solid var(--error); }
 .ai-progress small { display: block; overflow-wrap: anywhere; } .ai-progress > div { min-width: 0; flex: 1; }
 .ai-progress button { padding: 5px 8px; font-size: 11px; }
+.ai-suggestions { margin-top: 12px; }
 .toolbar { position: sticky; bottom: -18px; background: var(--bg); padding: 10px 0 3px; border-top: 1px solid var(--border); margin-top: 12px; } .toolbar .primary { flex: 1; }
 .group-row { border-bottom: 1px solid var(--border); padding: 9px 0; } .group-row .row { margin-top: 6px; } .group-row button,.chip { padding: 4px 8px; font-size: 11px; }
 .history-item { margin: 10px 0; } summary { cursor: pointer; }

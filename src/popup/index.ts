@@ -14,7 +14,10 @@ const progressLabel = el('div'), elapsed = el('small'), modelName = el('small');
 elapsed.setAttribute('aria-hidden', 'true');
 const stopAi = button('Cancel request', cancelRequest);
 progressLabel.append(elapsed, modelName); progressDetails.append(progressLabel, stopAi);
-const strategies = el('div', undefined, 'stack'), history = el('section'), presets = el('div', undefined, 'row');
+const aiSuggestions = el('section', undefined, 'ai-suggestions'), aiCards = el('div', undefined, 'stack');
+aiSuggestions.hidden = true;
+aiSuggestions.append(el('h2', 'Suggested groupings'), aiCards);
+const localCards = el('div', undefined, 'stack'), history = el('section'), presets = el('div', undefined, 'row');
 const instruction = el('textarea'); instruction.placeholder = 'Group by website, separate work from entertainment…'; instruction.maxLength = 2000; instruction.setAttribute('aria-label', 'Custom grouping instruction');
 const refine = el('input'); refine.placeholder = 'Refine this plan…'; refine.maxLength = 2000; refine.setAttribute('aria-label', 'Refine selected grouping');
 const scope = el('div', 'This window only', 'scope');
@@ -115,7 +118,8 @@ async function runAi(command: AiCommand): Promise<void> {
 function colorDot(color: string): HTMLElement { const dot = el('span', undefined, 'dot'); dot.dataset.color = color; dot.setAttribute('aria-hidden', 'true'); return dot; }
 function renderStrategies(): void {
   if (!state) return;
-  strategies.replaceChildren();
+  aiCards.replaceChildren();
+  localCards.replaceChildren();
   for (const plan of state.strategies) {
     const card = el('article', undefined, `card${selected?.id === plan.id ? ' selected' : ''}`);
     const pick = button('', () => { selected = plan; renderStrategies(); }); pick.setAttribute('aria-pressed', String(selected?.id === plan.id));
@@ -136,8 +140,10 @@ function renderStrategies(): void {
       if (untouched) preview.append(el('small', `${untouched} tab${untouched === 1 ? '' : 's'} will stay as they are.`));
       card.append(preview);
     }
-    strategies.append(card);
+    const cards = plan.id.startsWith('ai:') ? aiCards : localCards;
+    cards.append(card);
   }
+  aiSuggestions.hidden = !aiCards.childElementCount;
   refinement.hidden = !selected; locks();
 }
 function renderHistory(): void {
@@ -194,7 +200,9 @@ async function init(): Promise<void> {
   const tools = el('div', undefined, 'row');
   tools.append(button('Ungroup all', () => run(async () => { const r = await send<{message:string}>({ type: 'ungroupAll', windowId }); show(r.message); await reload(); })), button('Collapse all groups', () => run(async () => { await send({ type: 'collapseAll', windowId }); await reload(); show('Groups collapsed.'); })));
   const toolbar = el('div', undefined, 'toolbar row'); toolbar.append(button('Cancel', () => { selected = undefined; renderStrategies(); status.hidden = true; }), apply);
-  root.append(header, suggest, providerHint, status, progressDetails, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), strategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
+  const localStrategies = el('section');
+  localStrategies.append(el('h2', 'Local strategies'), localCards);
+  root.append(header, suggest, providerHint, status, progressDetails, aiSuggestions, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), localStrategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
   instruction.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void custom(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!apply.disabled) apply.click(); } });
   busy = true; locks();

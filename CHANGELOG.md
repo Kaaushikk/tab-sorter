@@ -4,7 +4,11 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
-### Fixed
+### Changed in v0.2.2
+
+- Show suggested grouping cards under **Suggest groupings**, above custom instructions and the local strategies.
+
+### Fixed in v0.2.2
 
 - Add the required UUID namespace to the ChatGPT helper's host ID. Restarting the helper upgrades existing IDs and preserves the pairing code.
 - Forward ChatGPT plan responses when OpenAI streams events without a content type. The extension still checks that the response completed.
