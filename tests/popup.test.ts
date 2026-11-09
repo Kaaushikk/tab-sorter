@@ -35,7 +35,7 @@ it.each(['none', 'chatgpt'] as const)('opens the popup with %s settings after lo
   vi.stubGlobal('chrome', { windows: { getCurrent: async () => ({ id: 1 }) }, runtime: { sendMessage } });
   await import('../src/popup/index');
   await vi.waitFor(() => expect(root.text).toContain('This window only · 0 tabs'));
-  expect(root.text).toContain('Suggest groupings');
+  expect(root.text).toContain(provider === 'none' ? 'Set up AI suggestions' : 'Suggest groupings');
   expect(root.text).toContain(provider === 'chatgpt' ? 'Using ChatGPT plan · Manage ChatGPT usage' : 'Local strategies always work');
 });
 
@@ -48,7 +48,7 @@ it('shows returned AI groupings below the suggest button and above local strateg
   });
   const local: Strategy = { id: 'website', label: 'By website', description: '', groups: [] };
   const ai: Strategy = { id: 'ai:topic', label: 'By topic', description: '', groups: [{ name: 'Reading', color: 'blue', tabIds: [1] }] };
-  const state = { tabs: [], groups: [], strategies: [local], snapshots: [], settings: DEFAULTS };
+  const state = { tabs: [], groups: [], strategies: [local], snapshots: [], settings: { ...DEFAULTS, provider: 'chatgpt' } };
   const sendMessage = vi.fn(async (command: Command) => ({
     ok: true, value: command.type === 'aiStatus' ? null
       : command.type === 'suggest' ? { state: { ...state, strategies: [local, ai] } } : state,

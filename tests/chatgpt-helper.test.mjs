@@ -67,6 +67,24 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
   try {
     expect((await globalThis.fetch(origin + '/status')).status).toBe(403);
     expect((await request('/status', { headers: { Origin: 'https://example.com' } })).status).toBe(403);
+    const browser = 'chrome-extension://' + 'a'.repeat(32);
+    const setup = { 'X-Tab-Sorter-Setup': '1', Origin: browser };
+    const start = (headers) => globalThis.fetch(origin + '/pair/start', { method: 'POST', headers });
+    expect((await start({ ...setup, Origin: 'https://example.com' })).status).toBe(403);
+    const { approvalUrl, secret } = await (await start(setup)).json();
+    const redeem = (caller = browser) => globalThis.fetch(origin + '/pair/redeem', {
+      method: 'POST', headers: { ...setup, Origin: caller, Authorization: 'Bearer ' + secret },
+    });
+    const confirmation = await globalThis.fetch(approvalUrl);
+    expect(confirmation.headers.get('x-frame-options')).toBe('DENY');
+    expect(await confirmation.text()).not.toContain(key);
+    expect((await redeem()).status).toBe(202);
+    expect((await globalThis.fetch(approvalUrl, { method: 'POST', headers: { Origin: 'https://example.com' } })).status).toBe(403);
+    expect((await globalThis.fetch(approvalUrl, { method: 'POST', headers: { Origin: origin } })).status).toBe(200);
+    expect((await redeem('chrome-extension://' + 'b'.repeat(32))).status).toBe(404);
+    expect(await (await redeem()).json()).toEqual({ key });
+    expect((await redeem()).status).toBe(404);
+
     let { target, state } = await begin();
     target.searchParams.set('state', 'wrong');
     expect((await globalThis.fetch(target)).status).toBe(400);
@@ -81,6 +99,7 @@ it('requires pairing and a verified OAuth callback, then streams grouping throug
     expect((await globalThis.fetch(target)).status).toBe(200);
     const status = await (await request('/status')).json();
     expect(status).toMatchObject({ connected: true, models: [{ id: 'test-model', name: 'Test model' }] });
+    expect(status.signIn).toEqual({ id: state, status: 'connected' });
     expect(JSON.stringify(status)).not.toMatch(/fake-access|fake-refresh/);
     const result = await request('/responses', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

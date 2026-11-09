@@ -69,8 +69,10 @@ Histories of normally closed windows are cleaned on subsequent use. Histories fr
 Use an eligible ChatGPT plan with the **ChatGPT plan** provider. This preview uses OpenAI's official browser sign-in and requires the local Tab Sorter helper. No API key is needed.
 
 1. On Windows, double-click **Start ChatGPT helper.cmd** in the project folder. On any supported Node.js installation, you can also run `npm run chatgpt` from the project folder. Keep the helper running while using ChatGPT for grouping.
-2. In **Tab Sorter → Settings**, choose **ChatGPT plan** and paste the local pairing code shown by the helper. Click **Continue with ChatGPT** and allow Tab Sorter to connect to the local helper.
-3. Sign in and approve plan usage on OpenAI's page. Return to Settings, click **Check connection**, choose a model, and click **Save settings**. Then try **Suggest groupings** in the popup.
+2. Click **Set up AI suggestions** in the popup, then **Continue with ChatGPT**. If prompted, grant access to the local helper and click **Allow connection** in the local setup tab.
+3. If the helper already has a connected account, Tab Sorter reuses it. Otherwise, sign in and approve plan usage on OpenAI's page. Tab Sorter saves the provider and chooses a model automatically. Open the popup and try **Suggest groupings**.
+
+The **Advanced connection settings** section has the manual pairing code, account and model choices, and sign-out controls.
 
 The helper listens only on `127.0.0.1:43128`. Its pairing code authenticates the extension to the helper; OpenAI sign-in tokens stay in a local credential file under your user profile. Tab Sorter applies the same titles-only and excluded-domain settings before sending tab details to OpenAI. Eligible requests use your ChatGPT plan or available credits. Use **Sign out** in Settings to end the local session and **Manage ChatGPT usage** to review limits or revoke access. [OpenAI sign-in documentation](https://developers.openai.com/siwc/token-sharing-open-source).
 

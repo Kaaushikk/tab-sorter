@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.2.4
+
+- Guide new users from the popup through ChatGPT setup. Approve the local connection in the browser and save an available model automatically. Manual pairing and model choices are under Advanced.
+
 ### Changed in v0.2.3
 
 - For more than 100 eligible tabs, build one topic plan in smaller batches with short tab IDs to reduce generation time.

@@ -7,6 +7,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { URL, pathToFileURL } from 'node:url';
 import { API, beginSignIn, BridgeError, finishSignIn, random, refresh, revoke } from './chatgpt-auth.mjs';
+import { createPairing } from './chatgpt-pairing.mjs';
 
 const HOST = '127.0.0.1';
 const PORT = 43128;
@@ -56,7 +57,8 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
   }
   // Earlier versions saved a bare UUID. Keep its value and add the required namespace.
   if (!data.hostId?.startsWith('urn:uuid:')) data.hostId = 'urn:uuid:' + (data.hostId ?? randomUUID());
-  let origin, pending, catalog, authMessage;
+  let origin, pending, catalog, authMessage, signIn;
+  const handlePairing = createPairing(data.key, reply);
   let queue = Promise.resolve();
   const streams = new Set();
   const profile = () => Object.hasOwn(data.profiles, data.active) ? data.profiles[data.active] : undefined;
@@ -123,9 +125,11 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
         await save({ ...data, active: next.clientId, profiles: { ...data.profiles, [next.clientId]: next } });
       });
       authMessage = undefined;
-      reply(res, 200, 'Connected to ChatGPT. Return to Tab Sorter settings, click Check connection, choose a model and save.', true);
+      if (signIn?.id === attempt.state) signIn.status = 'connected';
+      reply(res, 200, 'Connected to ChatGPT. Return to Tab Sorter settings to finish setup.', true);
     } catch (error) {
       authMessage = error instanceof BridgeError ? error.message : 'ChatGPT sign-in could not be verified. Try again from Tab Sorter settings.';
+      if (signIn?.id === attempt.state) signIn.status = 'failed';
       reply(res, 400, authMessage, true);
     }
   }
@@ -163,6 +167,7 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
       const url = new URL(req.url, origin);
       if (url.origin !== origin) return reply(res, 403, {});
       if (req.method === 'GET' && url.pathname === CALLBACK) return await callback(url, res);
+      if (handlePairing(req, res, url, origin)) return;
       if (!permitted(req, data.key)) return reply(res, 403, { message: 'Check the pairing code shown by the Tab Sorter helper.' });
       if (req.method === 'GET' && url.pathname === '/status') {
         const current = profile();
@@ -173,7 +178,7 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
         } catch (error) {
           message = error instanceof BridgeError ? error.message : 'Could not load your ChatGPT models. Check the connection and try again.';
         }
-        return reply(res, 200, { active: data.active, connected: !!current?.accessToken, accounts, models: items, message });
+        return reply(res, 200, { active: data.active, connected: !!current?.accessToken, accounts, models: items, message, signIn });
       }
       if (req.method === 'POST' && url.pathname === '/signin') {
         const id = url.searchParams.get('account');
@@ -181,12 +186,14 @@ export async function startHelper({ directory, port = PORT, fetcher = globalThis
         if (id && !account) throw new BridgeError(400, 'That account is no longer available.');
         authMessage = undefined;
         pending = beginSignIn(origin + CALLBACK, data.hostId, account);
-        return reply(res, 200, { url: pending.url });
+        signIn = { id: pending.state, status: 'pending' };
+        return reply(res, 200, { url: pending.url, attemptId: pending.state });
       }
       if (req.method === 'POST' && url.pathname === '/signout') {
         const revoked = await serialize(async () => {
           const current = profile();
           pending = undefined;
+          signIn = undefined;
           stopStreams();
           if (!current) return true;
           const confirmed = await revoke(fetcher, current);

@@ -32,12 +32,18 @@ function read(): Settings {
 }
 async function init(): Promise<void> {
   value = await settings();
-  chatgpt = chatgptSettings(value.chatgptKey, value.chatgptModel);
+  chatgpt = chatgptSettings(value.chatgptKey, value.chatgptModel, async (chatgptKey, chatgptModel) => {
+    if (provider.value !== 'chatgpt') throw new Error('Select ChatGPT plan to finish connecting.');
+    const current = await settings();
+    value = { ...current, provider: 'chatgpt', chatgptKey, chatgptModel };
+    await saveSettings(value);
+  });
   app.append(el('h1', 'Tab Sorter settings'), el('p', 'Your window. Your groups. Your choice of AI.', 'muted'));
   options(provider, [['none','Local only · no network'],['chatgpt','ChatGPT plan'],['anthropic','Anthropic'],['openai','Custom AI provider'],['ollama','Local Ollama']]);
   options(existing, [['keep','Keep existing groups untouched'],['merge','Merge into a matching name and color'],['dissolve','Dissolve participating groups first']]);
   options(unassigned, [['other','Put eligible unassigned AI tabs in Other'],['ungrouped','Leave unassigned tabs unchanged']]);
-  provider.value = value.provider; base.value = value.baseUrl; model.value = value.model; key.value = value.apiKey; key.type = 'password'; key.autocomplete = 'off'; key.spellcheck = false;
+  provider.value = location.hash === '#chatgpt' ? 'chatgpt' : value.provider;
+  base.value = value.baseUrl; model.value = value.model; key.value = value.apiKey; key.type = 'password'; key.autocomplete = 'off'; key.spellcheck = false;
   titles.checked = value.titlesOnly; pinned.checked = value.includePinned; mergeDomains.checked = value.mergeSubdomains; existing.value = value.existingGroups; unassigned.value = value.unassigned;
   domains.value = value.excludedDomains.join('\n'); domains.placeholder = 'mail.google.com\nbank.example'; model.placeholder = 'Exact model ID from your provider';
   const ai = el('section'); ai.append(el('h2', 'AI provider'), field('Provider', provider), traditional, chatgpt.panel, notice);
