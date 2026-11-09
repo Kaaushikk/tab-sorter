@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.2.5
+
+- Add guided OpenRouter, Claude API, and Ollama setup. Find available models and save the connection from one button. Keep custom endpoints and manual model IDs available.
+
 ### Changed in v0.2.4
 
 - Guide new users from the popup through ChatGPT setup. Approve the local connection in the browser and save an available model automatically. Manual pairing and model choices are under Advanced.

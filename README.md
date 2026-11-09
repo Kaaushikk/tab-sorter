@@ -76,21 +76,25 @@ The **Advanced connection settings** section has the manual pairing code, accoun
 
 The helper listens only on `127.0.0.1:43128`. Its pairing code authenticates the extension to the helper; OpenAI sign-in tokens stay in a local credential file under your user profile. Tab Sorter applies the same titles-only and excluded-domain settings before sending tab details to OpenAI. Eligible requests use your ChatGPT plan or available credits. Use **Sign out** in Settings to end the local session and **Manage ChatGPT usage** to review limits or revoke access. [OpenAI sign-in documentation](https://developers.openai.com/siwc/token-sharing-open-source).
 
-Open Settings with the gear button. Choose a provider, enter its exact model ID and configuration, click **Allow endpoint access**, then **Save settings**. Host access is requested only for that endpoint, never at install. Switching providers clears the unsaved key/model fields; save the desired configuration.
+For other providers, open Settings with the gear button. Choose **OpenRouter**, **Claude API**, or **Local Ollama**, then click **Connect and use**. Tab Sorter finds available models and saves the connection. To change the model, choose it from **Available models** and click **Connect and use** again. **Advanced connection settings** lets you enter a model ID manually. The browser asks for provider access during setup.
 
-### Anthropic
+### OpenRouter
 
-Use your own Anthropic key and an available model ID from your account. Requests go directly to `https://api.anthropic.com/v1/messages`, including the required `anthropic-dangerous-direct-browser-access: true` header. Some organization policies disallow direct browser calls even with a valid key; see [Anthropic authentication](https://platform.claude.com/docs/en/manage-claude/authentication).
+Paste an OpenRouter API key using the link in Settings. Tab Sorter checks the key and lists compatible text models. If you haven't chosen a model, Tab Sorter prefers free Gemma 4 when available, then another free option. Paid models require an explicit selection.
+
+### Claude API
+
+Paste a Claude Console API key. Tab Sorter prefers an available Haiku model for a new connection. Requests use your Claude API account and go directly to Anthropic. Some organization policies disallow direct browser calls even with a valid key. See [Anthropic authentication](https://platform.claude.com/docs/en/manage-claude/authentication).
 
 ### Custom AI provider
 
 Enter a base URL, typically `https://api.openai.com/v1`, a key, and a model ID supported by that server. Tab Sorter appends `/chat/completions`, enables streaming, and requests `response_format: {type: "json_object"}`. It also accepts a complete JSON response if the server ignores streaming. The endpoint must support Chat Completions and JSON mode. Remote endpoints require HTTPS. Redirects and URL-embedded credentials are rejected. Custom paths such as `https://host.example/api/v1` are supported.
 
-For an OpenRouter free trial, choose **Custom AI provider**, set the base URL to `https://openrouter.ai/api/v1`, click **Use free Gemma 4** (model ID `google/gemma-4-26b-a4b-it:free`), and use your OpenRouter key. Allow endpoint access and Save. Version 0.1.2 moves existing `openrouter/free` settings to this fixed model once, retaining the key and other preferences. Gemma 4 runs with reasoning disabled for this task. The model remains editable and the extension does not switch to paid models. Free availability and rate limits are controlled by OpenRouter. See the [free Gemma 4 listing](https://openrouter.ai/google/gemma-4-26b-a4b-it:free).
+Click **Connect and use** to list models if the provider exposes a compatible `/models` endpoint. Choose a model and click **Connect and use** again. If the endpoint does not list models, enter the ID under **Advanced connection settings**, click **Allow endpoint access**, and then **Save settings**.
 
 ### Ollama
 
-Use `http://localhost:11434` and the name of a locally installed model. No API key is sent. Requests use `/api/chat`, non-streaming responses, and JSON format. Providers must send response headers within 25 seconds; the whole response has a 60-second deadline. A cold model can exceed the connection deadline; warm it locally before retrying.
+Start Ollama with a chat model installed. Tab Sorter uses `http://localhost:11434` by default and lists locally installed models. No API key is sent. Requests use `/api/chat`, non-streaming responses, and JSON format. Providers must send response headers within 25 seconds. The whole response has a 60-second deadline. A cold model can exceed the connection deadline. Warm it locally before retrying.
 
 Ollama may require its `OLLAMA_ORIGINS` environment setting to allow the extension origin, such as `chrome-extension://YOUR_EXTENSION_ID`. Set it through your normal OS configuration, then restart Ollama. Find the ID on the browser's extensions page. Chrome and Brave unpacked IDs may differ, so allow each actual origin. Prefer specific origins over allowing every extension. See the [official Ollama FAQ](https://docs.ollama.com/faq#how-can-i-allow-additional-web-origins-to-access-ollama).
 
