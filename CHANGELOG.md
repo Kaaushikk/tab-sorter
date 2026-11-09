@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.2.3
+
+- For more than 100 eligible tabs, build one topic plan in smaller batches with short tab IDs to reduce generation time.
+
 ### Changed in v0.2.2
 
 - Show suggested grouping cards under **Suggest groupings**, above custom instructions and the local strategies.

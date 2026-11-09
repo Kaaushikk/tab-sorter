@@ -22,13 +22,27 @@ describe('provider validation',()=>{
     await customPlan([tab(1),tab(2,'https://bank.example/private')],{...DEFAULTS,provider:'openai',apiKey:'test-placeholder',model:'test',excludedDomains:['bank.example']},'refine',{id:'website',label:'Website',description:'local',groups:[{name:'example.com',color:'blue',tabIds:[1]},{name:'bank.example',color:'red',tabIds:[2]}]});
     expect(fetchMock.mock.calls[0][1].body).not.toContain('bank.example');
   });
-  it('batches over 150 tabs and carries consistent names',async()=>{
-    const fetchMock=vi.fn().mockImplementation(async (_url,init)=>{
-      const data=JSON.parse(JSON.parse(init.body).messages[1].content), ids=data.tabs.map((t:{id:number})=>t.id);
-      return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({strategies:['topic','content-type','website'].map((id,i)=>({id,label:id,description:'A plan',groups:[{name:'Shared',color:'blue',tabIds:ids.filter((_:number,n:number)=>n%(i+2)===0)},{name:'Rest',color:'red',tabIds:ids.filter((_:number,n:number)=>n%(i+2)!==0)}].filter(g=>g.tabIds.length)}))})}}]}));
-    });vi.stubGlobal('fetch',fetchMock);
-    const tabs=Array.from({length:151},(_,i)=>tab(i+1));const plans=await suggest(tabs,{...DEFAULTS,provider:'openai',model:'test',apiKey:'test-placeholder'});
-    expect(fetchMock).toHaveBeenCalledTimes(2);expect(plans[0].groups.find(g=>g.name==='Shared')!.tabIds).toContain(151);
-    expect(new Set(plans[0].groups.flatMap(g=>g.tabIds)).size).toBe(151);expect(fetchMock.mock.calls[1][1].body).toContain('reference');
+  it('builds one topic plan for 835 tabs, merging group names and restoring original IDs', async () => {
+    const fetchMock = vi.fn(async (_url, init: RequestInit) => {
+      const data = JSON.parse(JSON.parse(init.body as string).messages[1].content) as {
+        tabs: { id: number }[]; existingGroups: { name: string; color: string }[];
+      };
+      const ids = data.tabs.map(t => t.id);
+      const groups = [
+        { name: 'Reading', color: 'blue', tabIds: ids.filter(id => id % 2 === 1) },
+        { name: 'Projects', color: 'red', tabIds: ids.filter(id => id % 2 === 0) },
+      ];
+      return Response.json({ choices: [{ message: { content: JSON.stringify({ groups }) } }] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const tabs = Array.from({ length: 835 }, (_, i) => tab(2_000_001 + i));
+    const plans = await suggest(tabs, { ...DEFAULTS, provider: 'openai', model: 'test', apiKey: 'test-placeholder' });
+    const inputs = fetchMock.mock.calls.map(([, init]) => JSON.parse(JSON.parse(init.body as string).messages[1].content));
+    expect(inputs.map(input => input.tabs.length)).toEqual([100, 100, 100, 100, 100, 100, 100, 100, 35]);
+    expect(inputs[1].tabs.map((t: { id: number }) => t.id)).toEqual(Array.from({ length: 100 }, (_, i) => i + 1));
+    expect(inputs[1].existingGroups).toEqual([{ name: 'Reading', color: 'blue' }, { name: 'Projects', color: 'red' }]);
+    expect(plans).toHaveLength(1);
+    expect(plans[0].groups).toHaveLength(2);
+    expect(plans[0].groups.flatMap(g => g.tabIds).sort((a, b) => a - b)).toEqual(tabs.map(t => t.id));
   });
 });
