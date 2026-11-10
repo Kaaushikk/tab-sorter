@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Added in v0.2.6
+
+- Right-click a link and choose **Open link in tab group** to open it in an existing group in the current window.
+
 ### Changed in v0.2.5
 
 - Add guided OpenRouter, Claude API, and Ollama setup. Find available models and save the connection from one button. Keep custom endpoints and manual model IDs available.

@@ -7,6 +7,7 @@ import { validatePlan } from '../lib/validation';
 import { aiTabs } from '../lib/sanitize';
 import { aiStatus, cancelAi, clearAiWindow, runAiJob } from '../lib/ai-jobs';
 import type { Command, Response, Strategy, WindowState } from '../lib/types';
+import { registerLinkMenu } from './link-menu';
 
 async function load(windowId: number): Promise<WindowState> {
   const notice = await recoverWindow(windowId);
@@ -103,3 +104,4 @@ chrome.windows.onRemoved.addListener(windowId => {
   })();
 });
 chrome.runtime.onInstalled.addListener(() => { void chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }); });
+registerLinkMenu();

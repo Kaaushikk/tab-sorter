@@ -46,6 +46,8 @@ After rebuilding, click Reload on the extension's card and reopen the popup. Do 
 
 ## Use it
 
+Right-click a web link, choose **Open link in tab group**, then pick an existing group from the current window. The link opens in a background tab. Create a group first if the menu says there are no groups.
+
 Open Tab Sorter from the window you want to organize. Click a local strategy card to expand its tab preview, then **Apply grouping**. AI is optional. Existing groups and pinned tabs are skipped by default; adjust these choices in Settings.
 
 Use **Suggest groupings** for AI ideas or type an instruction such as “separate work from entertainment.” Clear instructions such as “group by website” run locally. Complex instructions that merely mention a website use AI. With a selected plan, enter a refinement such as “merge the book groups.” Suggestions, instructions, and refinements never apply automatically.

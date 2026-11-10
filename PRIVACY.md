@@ -34,7 +34,7 @@ The provider's own privacy, retention, training, geographic processing, and bill
 
 ## Permissions
 
-`tabs` reads the scoped tab metadata needed to preview groups; `tabGroups` manages native groups; `storage` saves preferences, previews, and undo history. Optional HTTP/HTTPS host access allows configurable AI endpoints and is requested at runtime for the selected endpoint. It is not granted at install. No browsing-history, identity, content-script, or sync permission is requested.
+`tabs` reads the scoped tab metadata needed to preview groups. `tabGroups` manages native groups. `storage` saves preferences, previews, and undo history. `contextMenus` adds the right-click command to open a link in an existing group. The extension uses the clicked link to open the tab locally. Optional HTTP/HTTPS host access allows configurable AI endpoints and is requested at runtime for the selected endpoint. It is not granted at install. No browsing-history, identity, content-script, or sync permission is requested.
 
 ## Retention and deletion
 
