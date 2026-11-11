@@ -64,14 +64,29 @@ export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
   if (onlyIdle && target.some(tab => !tab.discarded && !isIdle(tab, now))) {
     throw new Error('This group has a recently used or protected tab. Review it before putting it to sleep.');
   }
-  let discarded = 0;
+  let discarded = 0, alreadySleeping = 0, keptAwake = 0;
   for (const before of target) {
-    if (before.id === undefined || !canSleep(before)) continue;
+    if (before.id === undefined) continue;
+    if (before.discarded) {
+      alreadySleeping++;
+      continue;
+    }
+    if (!canSleep(before)) {
+      keptAwake++;
+      continue;
+    }
     try {
       const current = await chrome.tabs.get(before.id);
-      if (current.windowId !== before.windowId || current.url !== before.url || !canSleep(current)) continue;
+      if (current.windowId !== before.windowId || current.url !== before.url) continue;
       if (command.scope === 'group' && current.groupId !== command.groupId) continue;
-      if (onlyIdle && !isIdle(current, now)) continue;
+      if (current.discarded) {
+        alreadySleeping++;
+        continue;
+      }
+      if (!canSleep(current) || (onlyIdle && !isIdle(current, now))) {
+        keptAwake++;
+        continue;
+      }
       const result = await chrome.tabs.discard(before.id);
       if (result?.discarded) discarded++;
     } catch {
@@ -79,13 +94,13 @@ export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
     }
   }
   const skipped = target.length - discarded;
-  const scope = allWindows ? ' across all regular windows' : '';
-  const outcome = discarded
-    ? `Put ${discarded} tab${discarded === 1 ? '' : 's'} to sleep${scope}.`
-    : `No tabs went to sleep${scope}.`;
-  const skippedNote = skipped ? ` Skipped ${skipped} protected, already sleeping, or unavailable tab${skipped === 1 ? '' : 's'}.` : '';
+  const unavailable = skipped - alreadySleeping - keptAwake;
+  const windowCount = allWindows ? new Set(target.map(tab => tab.windowId)).size : 0;
+  const scope = allWindows ? ` across ${windowCount} regular window${windowCount === 1 ? '' : 's'}` : '';
+  const breakdown = [`${discarded} newly asleep`, `${alreadySleeping} already asleep`, `${keptAwake} kept awake`];
+  if (unavailable) breakdown.push(`${unavailable} could not unload`);
   return {
     discarded, skipped,
-    message: `${outcome}${skippedNote}${discarded ? ' Select a sleeping tab to reload it.' : ''}`,
+    message: `Checked ${target.length} tab${target.length === 1 ? '' : 's'}${scope}. ${breakdown.join(' · ')}.`,
   };
 }

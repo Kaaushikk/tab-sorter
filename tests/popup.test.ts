@@ -47,7 +47,7 @@ it('shows progress and the confirmed sleep count inside Free memory', async () =
     querySelector: () => root, createElement: (tag: string) => new ElementStub(tag), addEventListener: () => {},
   });
   const state = { tabs: [], groups: [], strategies: [], snapshots: [], settings: DEFAULTS };
-  const message = 'Put 3 tabs to sleep across all regular windows. Skipped 2 protected, already sleeping, or unavailable tabs.';
+  const message = 'Checked 5 tabs across 2 regular windows. 3 newly asleep · 1 already asleep · 1 kept awake.';
   const sendMessage = vi.fn(async (command: Command) => ({
     ok: true, value: command.type === 'sleep' ? { discarded: 3, skipped: 2, message } : command.type === 'aiStatus' ? null : state,
   }));

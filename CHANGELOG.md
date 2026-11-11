@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.2.11
+
+- Show how many tabs were checked, newly put to sleep, already asleep, or kept awake after a sleep request.
+
 ### Changed in v0.2.10
 
 - Show tab sleep progress and the browser-confirmed count directly under the **Free memory** buttons.

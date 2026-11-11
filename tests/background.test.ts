@@ -74,14 +74,16 @@ it('sleeps eligible tabs across regular windows without touching groups, private
 
   const before = structuredClone(mock.tabs);
   expect(await send({ type: 'sleep', scope: 'all-windows', windowId: 1 })).toMatchObject({
-    discarded: 2, skipped: 4, message: expect.stringContaining('across all regular windows'),
+    discarded: 2, skipped: 4,
+    message: 'Checked 6 tabs across 2 regular windows. 2 newly asleep · 0 already asleep · 3 kept awake · 1 could not unload.',
   });
   expect(mock.api.windows.getAll).toHaveBeenCalledExactlyOnceWith({ windowTypes: ['normal'], populate: true });
   expect(mock.api.tabs.discard.mock.calls).toEqual([[2], [4]]);
   expect(mock.tabs).toEqual(before.map(tab => [2, 4].includes(tab.id) ? { ...tab, discarded: true } : tab));
   expect(mock.groups).toEqual(groups);
   expect(await send({ type: 'sleep', scope: 'all-windows', windowId: 1 })).toMatchObject({
-    discarded: 0, message: expect.stringContaining('No tabs went to sleep across all regular windows.'),
+    discarded: 0, skipped: 6,
+    message: 'Checked 6 tabs across 2 regular windows. 0 newly asleep · 2 already asleep · 3 kept awake · 1 could not unload.',
   });
   expect(mock.api.tabs.discard.mock.calls).toEqual([[2], [4]]);
 });
