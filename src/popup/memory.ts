@@ -31,6 +31,8 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
   const status = el('div', undefined, 'status');
   status.role = 'status';
   status.hidden = true;
+  const reloadButton = button('Reload Tab Sorter', () => chrome.runtime.reload());
+  reloadButton.hidden = true;
   const suggestions = el('div', undefined, 'stack');
   const groups = el('select'), groupControls = el('div', undefined, 'stack');
   const chosen = new Set<number>();
@@ -112,7 +114,7 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
     count,
     button('Sleep inactive tabs in this window', () => perform({ type: 'sleep', scope: 'inactive' })),
     button('Sleep tabs across all windows', () => perform({ type: 'sleep', scope: 'all-windows' })),
-    status, suggestions, groupControls, individual);
+    status, reloadButton, suggestions, groupControls, individual);
   panel.append(summary, body);
-  return { panel, status, update };
+  return { panel, status, reloadButton, update };
 }

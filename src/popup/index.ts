@@ -55,7 +55,12 @@ function show(message: string, error = false, target = status): void {
   if (target.textContent !== message) target.textContent = message;
   target.className = `status${error ? ' error' : ''}`;
 }
-function showSleep(message: string, error = false): void { show(message, error, memory.status); }
+function showSleep(message: string, error = false): void {
+  // Older workers reject sleep options that the rebuilt popup can already show.
+  const reloadNeeded = error && message === 'Choose which tabs to unload.';
+  memory.reloadButton.hidden = !reloadNeeded;
+  show(reloadNeeded ? 'Reload Tab Sorter, then reopen the popup and try sleeping tabs again.' : message, error, memory.status);
+}
 function locks(): void { root.querySelectorAll('button,input,textarea').forEach(n => { (n as HTMLButtonElement).disabled = n === stopAi ? !activeAi || activeAi.cancelling : busy; }); apply.disabled = busy || !selected?.groups.length; root.setAttribute('aria-busy', String(busy)); }
 async function run(fn: () => Promise<void>, { workingMessage = 'Working on this window…', report = show } = {}): Promise<void> {
   if (busy) return; busy = true; locks(); report(workingMessage);

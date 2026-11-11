@@ -2,7 +2,7 @@
 
 Organize one browser window into native tab groups. Choose a local strategy, ask your own AI provider for ideas, or describe the groups you want in plain English. Preview every plan before applying it.
 
-**Status:** v0.2.11 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and live provider verification are tracked in [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md).
+**Status:** v0.2.12 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and live provider verification are tracked in [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md).
 
 <!-- Demo GIF placeholder: replace with docs/assets/demo.gif after recording synthetic test tabs. -->
 **Demo GIF:** coming after browser validation. Do not record personal tabs or API keys.

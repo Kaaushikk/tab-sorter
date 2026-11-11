@@ -40,7 +40,7 @@ it.each(['none', 'chatgpt'] as const)('opens the popup with %s settings after lo
   expect(root.text).toContain(provider === 'chatgpt' ? 'Using ChatGPT plan · Manage ChatGPT usage' : 'Local strategies always work');
 });
 
-it('shows progress and the confirmed sleep count inside Free memory', async () => {
+it.each(['success', 'older worker'] as const)('shows the %s result inside Free memory', async outcome => {
   vi.resetModules();
   const root = new ElementStub('main');
   vi.stubGlobal('document', {
@@ -48,10 +48,15 @@ it('shows progress and the confirmed sleep count inside Free memory', async () =
   });
   const state = { tabs: [], groups: [], strategies: [], snapshots: [], settings: DEFAULTS };
   const message = 'Checked 5 tabs across 2 regular windows. 3 newly asleep · 1 already asleep · 1 kept awake.';
-  const sendMessage = vi.fn(async (command: Command) => ({
-    ok: true, value: command.type === 'sleep' ? { discarded: 3, skipped: 2, message } : command.type === 'aiStatus' ? null : state,
-  }));
-  vi.stubGlobal('chrome', { windows: { getCurrent: async () => ({ id: 1 }) }, runtime: { sendMessage } });
+  const reload = vi.fn();
+  const sendMessage = vi.fn(async (command: Command) => {
+    if (command.type === 'sleep') {
+      return outcome === 'older worker' ? { ok: false, error: 'Choose which tabs to unload.' }
+        : { ok: true, value: { discarded: 3, skipped: 2, message } };
+    }
+    return { ok: true, value: command.type === 'aiStatus' ? null : state };
+  });
+  vi.stubGlobal('chrome', { windows: { getCurrent: async () => ({ id: 1 }) }, runtime: { sendMessage, reload } });
   await import('../src/popup/index');
   await vi.waitFor(() => expect(root.text).toContain('0 tabs in this window'));
   const panel = root.children.find(node => node instanceof ElementStub && node.tag === 'details') as ElementStub;
@@ -59,12 +64,23 @@ it('shows progress and the confirmed sleep count inside Free memory', async () =
   const index = controls.children.findIndex(node => node instanceof ElementStub && node.text === 'Sleep tabs across all windows');
   const sleepButton = controls.children[index] as ElementStub;
   const status = controls.children[index + 1] as ElementStub;
+  const reloadButton = controls.children[index + 2] as ElementStub;
   expect(status.hidden).toBe(true);
+  expect(reloadButton.hidden).toBe(true);
   sleepButton.click();
   expect(status.hidden).toBe(false);
   expect(status.text).toBe('Putting tabs to sleep across all windows…');
-  await vi.waitFor(() => expect(status.text).toBe(message));
-  expect(sendMessage).toHaveBeenCalledWith({ type: 'sleep', scope: 'all-windows', windowId: 1 });
+  const expected = outcome === 'older worker' ? 'Reload Tab Sorter, then reopen the popup and try sleeping tabs again.' : message;
+  await vi.waitFor(() => expect(status.text).toBe(expected));
+  expect(sendMessage.mock.calls.filter(([command]) => command.type === 'sleep')).toEqual([[{ type: 'sleep', scope: 'all-windows', windowId: 1 }]]);
+  expect(reload).not.toHaveBeenCalled();
+  if (outcome === 'older worker') {
+    expect(reloadButton.hidden).toBe(false);
+    reloadButton.click();
+    expect(reload).toHaveBeenCalledOnce();
+  } else {
+    expect(reloadButton.hidden).toBe(true);
+  }
 });
 
 it('shows returned AI groupings below the suggest button and above local strategies', async () => {

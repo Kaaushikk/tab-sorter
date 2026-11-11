@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Fixed in v0.2.12
+
+- Offer to reload Tab Sorter if an older background worker rejects a sleep command.
+
 ### Changed in v0.2.11
 
 - Show how many tabs were checked, newly put to sleep, already asleep, or kept awake after a sleep request.
