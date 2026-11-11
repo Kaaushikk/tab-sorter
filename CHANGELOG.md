@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Added in v0.2.7
+
+- Unload selected tabs, a group, or eligible inactive tabs from **Free memory**. Keep tabs and groups in place and reload pages on activation.
+
 ### Added in v0.2.6
 
 - Right-click a link and choose **Open link in tab group** to open it in an existing group in the current window.

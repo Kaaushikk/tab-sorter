@@ -24,6 +24,43 @@ it('loads two local strategies without returning the API key or other-window tab
   mock.local.settings={...DEFAULTS,apiKey:'not-a-real-key'};
   const s=await send<WindowState>({type:'load',windowId:1});expect(s.strategies.map(x=>x.id)).toEqual(['website','content-type']);expect(s.tabs).toHaveLength(3);expect(s.settings).not.toHaveProperty('apiKey');expect(JSON.stringify(s)).not.toContain('private.example');
 });
+
+it('unloads eligible inactive tabs through the command handler while preserving groups and protected tabs', async () => {
+  mock.setTabs([
+    tab(1, 'https://example.com/active', { active: true }),
+    tab(2, 'https://example.com/pinned', { pinned: true }),
+    tab(3, 'https://example.com/audio', { audible: true }),
+    tab(4, 'https://example.com/protected', { autoDiscardable: false }),
+    tab(5, 'https://example.com/sleeping', { discarded: true }),
+    tab(6, 'chrome://settings'),
+    tab(7, 'https://example.com/reading', { groupId: 10 }),
+    tab(8, 'https://example.com/later'),
+    tab(9, 'https://other.example', { windowId: 2 }),
+  ]);
+  mock.setGroups([{ id: 10, title: 'Reading', color: 'blue', collapsed: true }]);
+  const before = mock.tabs.map(({ discarded: _discarded, ...tab }) => { void _discarded; return tab; });
+  expect(await send({ type: 'sleep', scope: 'inactive', windowId: 1 })).toMatchObject({ discarded: 2, skipped: 6 });
+  expect(mock.api.tabs.discard.mock.calls.map(([id]) => id)).toEqual([7, 8]);
+  expect(mock.tabs.map(({ discarded: _discarded, ...tab }) => { void _discarded; return tab; })).toEqual(before);
+  expect(mock.groups).toEqual([{ id: 10, title: 'Reading', color: 'blue', collapsed: true }]);
+  expect((await send<WindowState>({ type: 'load', windowId: 1 })).tabs.find(t => t.id === 7)?.discarded).toBe(true);
+});
+
+it('unloads only the selected group and rechecks membership immediately before unloading', async () => {
+  mock.setTabs([tab(1, undefined, { groupId: 10 }), tab(2, undefined, { groupId: 10 }), tab(3)]);
+  mock.setGroups([{ id: 10, title: 'Reading', color: 'blue', collapsed: true }]);
+  mock.api.tabs.get.mockImplementation(async id => ({ ...mock.tabs.find(tab => tab.id === id)!, groupId: id === 2 ? -1 : 10 }));
+  expect(await send({ type: 'sleep', scope: 'group', groupId: 10, windowId: 1 })).toMatchObject({ discarded: 1, skipped: 1 });
+  expect(mock.api.tabs.discard).toHaveBeenCalledExactlyOnceWith(1);
+});
+
+it('unloads selected tabs and rejects selections from another window', async () => {
+  expect(await send({ type: 'sleep', scope: 'selected', tabIds: [1, 3], windowId: 1 })).toMatchObject({ discarded: 2 });
+  expect(mock.api.tabs.discard.mock.calls.map(([id]) => id)).toEqual([1, 3]);
+  mock.api.tabs.discard.mockClear();
+  await expect(send({ type: 'sleep', scope: 'selected', tabIds: [50], windowId: 1 })).rejects.toThrow(/changed or moved/);
+  expect(mock.api.tabs.discard).not.toHaveBeenCalled();
+});
 it('rejects a plan when a tab navigates after preview',async()=>{
   const s=await send<WindowState>({type:'load',windowId:1});mock.tabs[0].url='https://new.example';
   await expect(send({type:'apply',windowId:1,strategy:s.strategies[0]})).rejects.toThrow(/changed since/);expect(mock.api.tabs.group).not.toHaveBeenCalled();

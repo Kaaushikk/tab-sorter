@@ -15,7 +15,8 @@ export async function readWindow(windowId: number): Promise<{ tabs: Tab[]; group
     tabs: raw.filter(t => t.windowId === windowId && !t.incognito && t.id !== undefined).map(t => {
       const url = t.url || t.pendingUrl || ''; let hostname = '';
       try { hostname = new URL(url).hostname; } catch { /* Loading or browser page. */ }
-      return { id: t.id!, windowId, index: t.index, title: t.title || hostname || 'Untitled tab', url, hostname, pinned: t.pinned, incognito: t.incognito, groupId: t.groupId };
+      return { id: t.id!, windowId, index: t.index, title: t.title || hostname || 'Untitled tab', url, hostname, pinned: t.pinned, incognito: t.incognito, groupId: t.groupId,
+        active: t.active, audible: t.audible, discarded: t.discarded, autoDiscardable: t.autoDiscardable };
     }),
     groups: groups.filter(g => g.windowId === windowId).map(g => ({ id: g.id, title: g.title ?? '', color: g.color, collapsed: g.collapsed })),
   };

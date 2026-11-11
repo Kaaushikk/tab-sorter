@@ -35,6 +35,13 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .ai-progress small { display: block; overflow-wrap: anywhere; } .ai-progress > div { min-width: 0; flex: 1; }
 .ai-progress button { padding: 5px 8px; font-size: 11px; }
 .ai-suggestions { margin-top: 12px; }
+.memory-panel { border: 1px solid var(--border); border-radius: 9px; padding: 10px; margin-bottom: 14px; background: var(--surface); }
+.memory-panel > summary { font-weight: 600; }
+.memory-panel > div { margin-top: 10px; }
+.memory-tabs { max-height: 180px; overflow-y: auto; margin: 8px 0; }
+.memory-tab { display: flex; gap: 8px; padding: 5px 0; align-items: start; }
+.memory-tab input { width: auto; margin-top: 4px; }
+.memory-tab span { overflow-wrap: anywhere; }
 .toolbar { position: sticky; bottom: -18px; background: var(--bg); padding: 10px 0 3px; border-top: 1px solid var(--border); margin-top: 12px; } .toolbar .primary { flex: 1; }
 .group-row { border-bottom: 1px solid var(--border); padding: 9px 0; } .group-row .row { margin-top: 6px; } .group-row button,.chip { padding: 4px 8px; font-size: 11px; }
 .history-item { margin: 10px 0; } summary { cursor: pointer; }

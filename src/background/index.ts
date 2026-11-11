@@ -8,6 +8,7 @@ import { aiTabs } from '../lib/sanitize';
 import { aiStatus, cancelAi, clearAiWindow, runAiJob } from '../lib/ai-jobs';
 import type { Command, Response, Strategy, WindowState } from '../lib/types';
 import { registerLinkMenu } from './link-menu';
+import { sleepTabs } from '../lib/memory';
 
 async function load(windowId: number): Promise<WindowState> {
   const notice = await recoverWindow(windowId);
@@ -33,6 +34,7 @@ async function execute(c: Command): Promise<unknown> {
   if (c.type === 'load') return load(windowId);
   if (c.type === 'aiStatus') return (await aiStatus(windowId)) ?? null;
   if (c.type === 'cancelAi') return { cancelled: await cancelAi(windowId, c.requestId) };
+  if (c.type === 'sleep') return sleepTabs(c);
   const current = await readWindow(windowId), s = await settings();
   if (c.type === 'suggest' || c.type === 'custom' || c.type === 'refine') {
     return runAiJob(windowId, c.requestId ?? crypto.randomUUID(), s.provider === 'chatgpt' ? s.chatgptModel : s.model, async (control, publish) => {

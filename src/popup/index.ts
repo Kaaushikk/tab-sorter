@@ -2,6 +2,7 @@ import '../style.css';
 import { button, el } from '../lib/ui';
 import { FAST_OPENROUTER_MODEL } from '../lib/storage';
 import { CHATGPT_USAGE } from '../lib/chatgpt';
+import { memoryPanel } from './memory';
 import type { AiCommand, AiJob, Command, Response, Strategy, WindowState } from '../lib/types';
 
 const root = document.querySelector<HTMLElement>('#app')!; root.className = 'popup';
@@ -31,6 +32,11 @@ const suggestButton = button('✦ Suggest groupings', async () => {
 }, 'primary wide');
 const apply = button('Apply grouping', () => run(async () => { if (!selected) return; const result = await send<{message:string}>({ type: 'apply', windowId, strategy: selected }); selected = undefined; show(result.message); await reload(); }), 'primary');
 const refinement = el('div', undefined, 'stack'); refinement.hidden = true;
+const memory = memoryPanel(command => run(async () => {
+  const result = await send<{ message: string }>({ ...command, windowId });
+  await reload();
+  show(result.message);
+}));
 
 async function send<T>(command: Command): Promise<T> {
   const r = await chrome.runtime.sendMessage(command) as Response<T>;
@@ -114,7 +120,7 @@ async function runAi(command: AiCommand): Promise<void> {
   beginProgress(requestId, Date.now());
   try {
     const result = await send<{ state: WindowState; selectedId?: string }>({ ...command, requestId });
-    state = result.state; selected = state.strategies.find(s => s.id === result.selectedId); renderStrategies();
+    state = result.state; memory.update(state); selected = state.strategies.find(s => s.id === result.selectedId); renderStrategies();
     if (command.type === 'refine') refine.value = '';
     show(command.type === 'suggest' ? suggestionMessage() : 'Preview ready. Review the groups before applying.');
   } catch (error) {
@@ -178,6 +184,7 @@ function renderHistory(): void {
 }
 async function reload(): Promise<void> {
   state = await send<WindowState>({ type: 'load', windowId });
+  memory.update(state);
   suggestButton.textContent = state.settings.provider === 'none' ? '✦ Set up AI suggestions' : '✦ Suggest groupings';
   if (state.settings.provider === 'chatgpt') {
     const usage = el('a', 'Manage ChatGPT usage'); usage.href = CHATGPT_USAGE; usage.target = '_blank'; usage.rel = 'noopener';
@@ -209,7 +216,7 @@ async function init(): Promise<void> {
   const toolbar = el('div', undefined, 'toolbar row'); toolbar.append(button('Cancel', () => { selected = undefined; renderStrategies(); status.hidden = true; }), apply);
   const localStrategies = el('section');
   localStrategies.append(el('h2', 'Local strategies'), localCards);
-  root.append(header, suggestButton, providerHint, status, progressDetails, aiSuggestions, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), localStrategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
+  root.append(header, memory.panel, suggestButton, providerHint, status, progressDetails, aiSuggestions, el('hr', undefined, 'divider'), customBox, el('hr', undefined, 'divider'), localStrategies, refinement, toolbar, el('hr', undefined, 'divider'), history, el('hr', undefined, 'divider'), tools);
   instruction.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) { e.preventDefault(); void custom(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!apply.disabled) apply.click(); } });
   busy = true; locks();

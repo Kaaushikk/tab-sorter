@@ -16,6 +16,8 @@ export function browserMock(initial: Tab[] = [], initialGroups: Group[] = []) {
   const api = {
     windows:{get:vi.fn(async (id:number) => ({id,type:'normal',incognito:false})),onRemoved:{addListener:vi.fn()}},
     tabs:{
+      get:vi.fn(async (id:number) => {const t=tabs.find(t=>t.id===id);if(!t)throw new Error('No such tab');return structuredClone(t);}),
+      discard:vi.fn(async (id:number) => {const t=tabs.find(t=>t.id===id);if(!t||t.active||t.discarded)return undefined;t.discarded=true;return structuredClone(t);}),
       query:vi.fn(async (q:{windowId:number}) => {if(!Number.isInteger(q.windowId)) throw new Error('Unscoped tab read'); return structuredClone(tabs.filter(t=>t.windowId===q.windowId));}),
       group:vi.fn(async (o:{tabIds:number[];groupId?:number;createProperties?:{windowId:number}}) => {
         const id=o.groupId??next++; if(o.groupId===undefined) groups.push({id,title:'',color:'grey',collapsed:false});

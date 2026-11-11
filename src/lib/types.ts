@@ -1,7 +1,7 @@
 export const COLORS = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'] as const;
 export type Color = typeof COLORS[number];
 export type ContentType = 'video' | 'article' | 'docs' | 'code' | 'social' | 'shopping' | 'search' | 'other';
-export interface Tab { id: number; windowId: number; index: number; title: string; url: string; hostname: string; pinned: boolean; incognito: boolean; groupId: number }
+export interface Tab { id: number; windowId: number; index: number; title: string; url: string; hostname: string; pinned: boolean; incognito: boolean; groupId: number; active?: boolean; audible?: boolean; discarded?: boolean; autoDiscardable?: boolean }
 export interface Group { id: number; title: string; color: Color; collapsed: boolean }
 export interface PlanGroup { name: string; color: Color; tabIds: number[] }
 export interface Plan { groups: PlanGroup[] }
@@ -22,6 +22,12 @@ export interface Snapshot {
 }
 export interface WindowState { windowId: number; tabs: Tab[]; groups: Group[]; strategies: Strategy[]; snapshots: Snapshot[]; settings: Omit<Settings, 'apiKey' | 'chatgptKey'>; notice?: string }
 export interface Result { restored: number; skipped: number; message: string }
+export interface MemoryResult { discarded: number; skipped: number; message: string }
+export type MemoryCommand = (
+  | { type: 'sleep'; scope: 'selected'; tabIds: number[] }
+  | { type: 'sleep'; scope: 'group'; groupId: number }
+  | { type: 'sleep'; scope: 'inactive' }
+) & { windowId: number };
 export type AiStage = 'preparing' | 'connecting' | 'waiting' | 'receiving' | 'validating' | 'retrying';
 export interface AiProgress { stage?: AiStage; attempt?: number; batch?: number; batches?: number; characters?: number }
 export interface AiControl { signal: AbortSignal; report(progress: AiProgress): Promise<void> | void }
@@ -33,6 +39,7 @@ export type AiCommand = ({ type: 'suggest' } | { type: 'custom'; instruction: st
 export type Command =
   | { type: 'load'; windowId: number }
   | AiCommand
+  | MemoryCommand
   | { type: 'aiStatus'; windowId: number }
   | { type: 'cancelAi'; windowId: number; requestId: string }
   | { type: 'ungroupAll'; windowId: number }

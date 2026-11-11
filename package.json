@@ -1,6 +1,6 @@
 {
   "name": "tab-sorter",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "private": true,
   "type": "module",
   "description": "Private, window-scoped native tab groups for Chromium browsers",
