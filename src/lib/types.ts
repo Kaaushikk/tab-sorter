@@ -1,7 +1,7 @@
 export const COLORS = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'] as const;
 export type Color = typeof COLORS[number];
 export type ContentType = 'video' | 'article' | 'docs' | 'code' | 'social' | 'shopping' | 'search' | 'other';
-export interface Tab { id: number; windowId: number; index: number; title: string; url: string; hostname: string; pinned: boolean; incognito: boolean; groupId: number; active?: boolean; audible?: boolean; discarded?: boolean; autoDiscardable?: boolean }
+export interface Tab { id: number; windowId: number; index: number; title: string; url: string; hostname: string; pinned: boolean; incognito: boolean; groupId: number; active?: boolean; audible?: boolean; discarded?: boolean; autoDiscardable?: boolean; lastAccessed?: number }
 export interface Group { id: number; title: string; color: Color; collapsed: boolean }
 export interface PlanGroup { name: string; color: Color; tabIds: number[] }
 export interface Plan { groups: PlanGroup[] }
@@ -25,7 +25,7 @@ export interface Result { restored: number; skipped: number; message: string }
 export interface MemoryResult { discarded: number; skipped: number; message: string }
 export type MemoryCommand = (
   | { type: 'sleep'; scope: 'selected'; tabIds: number[] }
-  | { type: 'sleep'; scope: 'group'; groupId: number }
+  | { type: 'sleep'; scope: 'group'; groupId: number; onlyIdle?: true }
   | { type: 'sleep'; scope: 'inactive' }
 ) & { windowId: number };
 export type AiStage = 'preparing' | 'connecting' | 'waiting' | 'receiving' | 'validating' | 'retrying';

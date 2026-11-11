@@ -41,7 +41,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .memory-tabs { max-height: 180px; overflow-y: auto; margin: 8px 0; }
 .memory-tab { display: flex; gap: 8px; padding: 5px 0; align-items: start; }
 .memory-tab input { width: auto; margin-top: 4px; }
-.memory-tab span { overflow-wrap: anywhere; }
+.memory-tab-info { display: grid; min-width: 0; overflow-wrap: anywhere; }
+.memory-suggestion { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.memory-suggestion button { flex-shrink: 0; }
 .toolbar { position: sticky; bottom: -18px; background: var(--bg); padding: 10px 0 3px; border-top: 1px solid var(--border); margin-top: 12px; } .toolbar .primary { flex: 1; }
 .group-row { border-bottom: 1px solid var(--border); padding: 9px 0; } .group-row .row { margin-top: 6px; } .group-row button,.chip { padding: 4px 8px; font-size: 11px; }
 .history-item { margin: 10px 0; } summary { cursor: pointer; }

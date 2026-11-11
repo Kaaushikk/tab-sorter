@@ -12,7 +12,7 @@ import { sleepTabs } from '../lib/memory';
 
 async function load(windowId: number): Promise<WindowState> {
   const notice = await recoverWindow(windowId);
-  const current = await readWindow(windowId), s = await settings(), counts = await frequency();
+  const current = await readWindow(windowId, { includeLastAccessed: true }), s = await settings(), counts = await frequency();
   const { apiKey, chatgptKey, ...safeSettings } = s; void apiKey; void chatgptKey;
   const cache = (await chrome.storage.session.get(`preview:${windowId}`))[`preview:${windowId}`] as { strategies: Strategy[]; tabs?: typeof current.tabs } | undefined;
   const local = localStrategies(current.tabs, s);

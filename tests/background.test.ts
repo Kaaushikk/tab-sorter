@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { browserMock, tab } from './mock';
 import { DEFAULTS, FAST_OPENROUTER_MODEL } from '../src/lib/storage';
+import { suggestSleepGroups } from '../src/lib/memory';
 import type { AiJob, Command, Response as CommandResponse, WindowState } from '../src/lib/types';
 let mock:ReturnType<typeof browserMock>;
 type Listener=(c:Command,sender:{id:string;url:string},reply:(value:CommandResponse<unknown>)=>void)=>boolean;
@@ -60,6 +61,40 @@ it('unloads selected tabs and rejects selections from another window', async () 
   mock.api.tabs.discard.mockClear();
   await expect(send({ type: 'sleep', scope: 'selected', tabIds: [50], windowId: 1 })).rejects.toThrow(/changed or moved/);
   expect(mock.api.tabs.discard).not.toHaveBeenCalled();
+});
+
+it('ranks idle groups by loaded tab count and excludes recently used, protected, and unknown tabs', async () => {
+  const now = Date.now(), idle = now - 60 * 60_000;
+  mock.setGroups([10, 11, 12, 13, 14, 15].map(id => ({ id, title: `Group ${id}`, color: 'blue', collapsed: true })));
+  mock.setTabs([
+    tab(1, undefined, { groupId: 10, lastAccessed: idle }),
+    tab(2, undefined, { groupId: 11, lastAccessed: idle + 60_000 }),
+    tab(3, undefined, { groupId: 11, lastAccessed: idle }),
+    tab(4, undefined, { groupId: 11, discarded: true }),
+    tab(5, undefined, { groupId: 12, lastAccessed: now - 60_000 }),
+    tab(6, undefined, { groupId: 13, lastAccessed: idle, audible: true }),
+    tab(7, undefined, { groupId: 14 }),
+    tab(8, undefined, { groupId: 15, lastAccessed: idle, discarded: true }),
+  ]);
+  const state = await send<WindowState>({ type: 'load', windowId: 1 });
+  expect(suggestSleepGroups(state.tabs, state.groups, now)).toEqual([
+    { id: 11, title: 'Group 11', count: 2, lastUsed: idle + 60_000 },
+    { id: 10, title: 'Group 10', count: 1, lastUsed: idle },
+  ]);
+});
+
+it('rechecks idle recommendations before unloading and skips a tab used during the request', async () => {
+  const now = Date.now(), idle = now - 60 * 60_000;
+  mock.setTabs([tab(1, undefined, { groupId: 10, lastAccessed: idle }), tab(2, undefined, { groupId: 10, lastAccessed: now })]);
+  mock.setGroups([{ id: 10, title: 'Reading', color: 'blue', collapsed: true }]);
+  const command = { type: 'sleep', scope: 'group', groupId: 10, onlyIdle: true, windowId: 1 } as const;
+  await expect(send(command)).rejects.toThrow(/recently used or protected/);
+  expect(mock.api.tabs.discard).not.toHaveBeenCalled();
+
+  mock.tabs[1].lastAccessed = idle;
+  mock.api.tabs.get.mockImplementation(async id => ({ ...mock.tabs.find(tab => tab.id === id)!, lastAccessed: id === 2 ? now : idle }));
+  expect(await send(command)).toMatchObject({ discarded: 1, skipped: 1 });
+  expect(mock.api.tabs.discard).toHaveBeenCalledExactlyOnceWith(1);
 });
 it('rejects a plan when a tab navigates after preview',async()=>{
   const s=await send<WindowState>({type:'load',windowId:1});mock.tabs[0].url='https://new.example';

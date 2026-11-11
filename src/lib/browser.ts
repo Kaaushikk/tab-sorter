@@ -3,7 +3,7 @@ import type { Group, Tab } from './types';
 export function requireGroups(): void {
   if (!chrome.tabGroups?.query || !chrome.tabs?.group) throw new Error('Native tab groups are unavailable in this browser. Update Chrome or Brave and try again.');
 }
-export async function readWindow(windowId: number): Promise<{ tabs: Tab[]; groups: Group[] }> {
+export async function readWindow(windowId: number, { includeLastAccessed = false } = {}): Promise<{ tabs: Tab[]; groups: Group[] }> {
   if (!Number.isInteger(windowId) || windowId < 0) throw new Error('A specific browser window is required.');
   requireGroups();
   const win = await chrome.windows.get(windowId, { populate: false });
@@ -16,7 +16,8 @@ export async function readWindow(windowId: number): Promise<{ tabs: Tab[]; group
       const url = t.url || t.pendingUrl || ''; let hostname = '';
       try { hostname = new URL(url).hostname; } catch { /* Loading or browser page. */ }
       return { id: t.id!, windowId, index: t.index, title: t.title || hostname || 'Untitled tab', url, hostname, pinned: t.pinned, incognito: t.incognito, groupId: t.groupId,
-        active: t.active, audible: t.audible, discarded: t.discarded, autoDiscardable: t.autoDiscardable };
+        active: t.active, audible: t.audible, discarded: t.discarded, autoDiscardable: t.autoDiscardable,
+        ...(includeLastAccessed ? { lastAccessed: t.lastAccessed } : {}) };
     }),
     groups: groups.filter(g => g.windowId === windowId).map(g => ({ id: g.id, title: g.title ?? '', color: g.color, collapsed: g.collapsed })),
   };
