@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Changed in v0.2.10
+
+- Show tab sleep progress and the browser-confirmed count directly under the **Free memory** buttons.
+
 ### Added in v0.2.9
 
 - Put eligible inactive tabs to sleep across all regular windows in the current browser profile.

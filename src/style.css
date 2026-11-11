@@ -38,6 +38,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .memory-panel { border: 1px solid var(--border); border-radius: 9px; padding: 10px; margin-bottom: 14px; background: var(--surface); }
 .memory-panel > summary { font-weight: 600; }
 .memory-panel > div { margin-top: 10px; }
+.memory-panel .status { margin: 0; }
 .memory-tabs { max-height: 180px; overflow-y: auto; margin: 8px 0; }
 .memory-tab { display: flex; gap: 8px; padding: 5px 0; align-items: start; }
 .memory-tab input { width: auto; margin-top: 4px; }

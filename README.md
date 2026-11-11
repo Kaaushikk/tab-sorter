@@ -2,7 +2,7 @@
 
 Organize one browser window into native tab groups. Choose a local strategy, ask your own AI provider for ideas, or describe the groups you want in plain English. Preview every plan before applying it.
 
-**Status:** v0.2.9 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and live provider verification are tracked in [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md).
+**Status:** v0.2.10 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and live provider verification are tracked in [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md).
 
 <!-- Demo GIF placeholder: replace with docs/assets/demo.gif after recording synthetic test tabs. -->
 **Demo GIF:** coming after browser validation. Do not record personal tabs or API keys.
@@ -48,7 +48,7 @@ After rebuilding, click Reload on the extension's card and reopen the popup. Do 
 
 Open **Free memory** at the top of the popup to unload selected tabs, a group, or eligible inactive tabs in the current window. Tabs stay in the tab strip and reload when activated. Active, pinned, audible, already-discarded, browser-internal, and browser-protected tabs are skipped. Unloading can lose unsaved page state, so save work first.
 
-Choose **Sleep tabs across all windows** to unload eligible pages in every regular window in the current browser profile. The active tab in each window stays loaded, and tabs and groups keep their positions.
+Choose **Sleep tabs across all windows** to unload eligible pages in every regular window in the current browser profile. The active tab in each window stays loaded, and tabs and groups keep their positions. The message below the sleep buttons shows how many tabs went to sleep and how many were skipped.
 
 The individual tab list shows whether each page is loaded or sleeping and when it was last used if the browser provides that information. **Suggested groups** shows up to three groups whose loaded tabs are eligible and have all been idle for at least 30 minutes. The group with the most pages to unload appears first. Suggestions are calculated on your device, and pages stay loaded until you choose to unload them. Use the browser’s Task Manager (Shift+Esc on Windows) for RAM and CPU figures.
 

@@ -80,8 +80,12 @@ export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
   }
   const skipped = target.length - discarded;
   const scope = allWindows ? ' across all regular windows' : '';
+  const outcome = discarded
+    ? `Put ${discarded} tab${discarded === 1 ? '' : 's'} to sleep${scope}.`
+    : `No tabs went to sleep${scope}.`;
+  const skippedNote = skipped ? ` Skipped ${skipped} protected, already sleeping, or unavailable tab${skipped === 1 ? '' : 's'}.` : '';
   return {
     discarded, skipped,
-    message: `Unloaded ${discarded} tab${discarded === 1 ? '' : 's'}${scope}.${skipped ? ` Skipped ${skipped} protected, sleeping, or unavailable tab${skipped === 1 ? '' : 's'}.` : ''} Open an unloaded tab to reload it.`,
+    message: `${outcome}${skippedNote}${discarded ? ' Select a sleeping tab to reload it.' : ''}`,
   };
 }

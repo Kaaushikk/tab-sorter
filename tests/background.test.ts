@@ -80,6 +80,10 @@ it('sleeps eligible tabs across regular windows without touching groups, private
   expect(mock.api.tabs.discard.mock.calls).toEqual([[2], [4]]);
   expect(mock.tabs).toEqual(before.map(tab => [2, 4].includes(tab.id) ? { ...tab, discarded: true } : tab));
   expect(mock.groups).toEqual(groups);
+  expect(await send({ type: 'sleep', scope: 'all-windows', windowId: 1 })).toMatchObject({
+    discarded: 0, message: expect.stringContaining('No tabs went to sleep across all regular windows.'),
+  });
+  expect(mock.api.tabs.discard.mock.calls).toEqual([[2], [4]]);
 });
 
 it('unloads only the selected group and rechecks membership immediately before unloading', async () => {

@@ -3,7 +3,7 @@ import { button, el } from '../lib/ui';
 import { FAST_OPENROUTER_MODEL } from '../lib/storage';
 import { CHATGPT_USAGE } from '../lib/chatgpt';
 import { memoryPanel } from './memory';
-import type { AiCommand, AiJob, Command, Response, Strategy, WindowState } from '../lib/types';
+import type { AiCommand, AiJob, Command, MemoryResult, Response, Strategy, WindowState } from '../lib/types';
 
 const root = document.querySelector<HTMLElement>('#app')!; root.className = 'popup';
 let windowId: number, state: WindowState, selected: Strategy | undefined, busy = false;
@@ -33,21 +33,33 @@ const suggestButton = button('✦ Suggest groupings', async () => {
 const apply = button('Apply grouping', () => run(async () => { if (!selected) return; const result = await send<{message:string}>({ type: 'apply', windowId, strategy: selected }); selected = undefined; show(result.message); await reload(); }), 'primary');
 const refinement = el('div', undefined, 'stack'); refinement.hidden = true;
 const memory = memoryPanel(command => run(async () => {
-  const result = await send<{ message: string }>({ ...command, windowId });
-  await reload();
-  show(result.message);
-}, command.scope === 'all-windows' ? 'Putting tabs to sleep across all windows…' : undefined));
+  const result = await send<MemoryResult>({ ...command, windowId });
+  showSleep(result.message);
+  try {
+    await reload();
+  } catch {
+    showSleep(`${result.message} Reopen Tab Sorter to refresh the tab list.`, true);
+  }
+}, {
+  report: showSleep,
+  workingMessage: command.scope === 'all-windows' ? 'Putting tabs to sleep across all windows…' : 'Putting tabs to sleep…',
+}));
 
 async function send<T>(command: Command): Promise<T> {
   const r = await chrome.runtime.sendMessage(command) as Response<T>;
   if (!r?.ok) throw new Error(r && !r.ok ? r.error : 'The background worker disconnected. Reopen the popup and check Undo history.');
   return r.value;
 }
-function show(message: string, error = false): void { status.hidden = false; if (status.textContent !== message) status.textContent = message; status.className = `status${error ? ' error' : ''}`; }
+function show(message: string, error = false, target = status): void {
+  target.hidden = false;
+  if (target.textContent !== message) target.textContent = message;
+  target.className = `status${error ? ' error' : ''}`;
+}
+function showSleep(message: string, error = false): void { show(message, error, memory.status); }
 function locks(): void { root.querySelectorAll('button,input,textarea').forEach(n => { (n as HTMLButtonElement).disabled = n === stopAi ? !activeAi || activeAi.cancelling : busy; }); apply.disabled = busy || !selected?.groups.length; root.setAttribute('aria-busy', String(busy)); }
-async function run(fn: () => Promise<void>, workingMessage = 'Working on this window…'): Promise<void> {
-  if (busy) return; busy = true; locks(); show(workingMessage);
-  try { await fn(); } catch (e) { show(e instanceof Error ? e.message : 'Something went wrong.', true); }
+async function run(fn: () => Promise<void>, { workingMessage = 'Working on this window…', report = show } = {}): Promise<void> {
+  if (busy) return; busy = true; locks(); report(workingMessage);
+  try { await fn(); } catch (e) { report(e instanceof Error ? e.message : 'Something went wrong.', true); }
   finally { busy = false; locks(); }
 }
 const stages: Record<AiJob['stage'], string> = {

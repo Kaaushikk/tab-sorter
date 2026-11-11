@@ -28,6 +28,9 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
   const panel = el('details', undefined, 'memory-panel');
   const summary = el('summary', 'Free memory');
   const count = el('p', '', 'muted');
+  const status = el('div', undefined, 'status');
+  status.role = 'status';
+  status.hidden = true;
   const suggestions = el('div', undefined, 'stack');
   const groups = el('select'), groupControls = el('div', undefined, 'stack');
   const chosen = new Set<number>();
@@ -109,7 +112,7 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
     count,
     button('Sleep inactive tabs in this window', () => perform({ type: 'sleep', scope: 'inactive' })),
     button('Sleep tabs across all windows', () => perform({ type: 'sleep', scope: 'all-windows' })),
-    suggestions, groupControls, individual);
+    status, suggestions, groupControls, individual);
   panel.append(summary, body);
-  return { panel, update };
+  return { panel, status, update };
 }

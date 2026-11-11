@@ -40,6 +40,33 @@ it.each(['none', 'chatgpt'] as const)('opens the popup with %s settings after lo
   expect(root.text).toContain(provider === 'chatgpt' ? 'Using ChatGPT plan · Manage ChatGPT usage' : 'Local strategies always work');
 });
 
+it('shows progress and the confirmed sleep count inside Free memory', async () => {
+  vi.resetModules();
+  const root = new ElementStub('main');
+  vi.stubGlobal('document', {
+    querySelector: () => root, createElement: (tag: string) => new ElementStub(tag), addEventListener: () => {},
+  });
+  const state = { tabs: [], groups: [], strategies: [], snapshots: [], settings: DEFAULTS };
+  const message = 'Put 3 tabs to sleep across all regular windows. Skipped 2 protected, already sleeping, or unavailable tabs.';
+  const sendMessage = vi.fn(async (command: Command) => ({
+    ok: true, value: command.type === 'sleep' ? { discarded: 3, skipped: 2, message } : command.type === 'aiStatus' ? null : state,
+  }));
+  vi.stubGlobal('chrome', { windows: { getCurrent: async () => ({ id: 1 }) }, runtime: { sendMessage } });
+  await import('../src/popup/index');
+  await vi.waitFor(() => expect(root.text).toContain('0 tabs in this window'));
+  const panel = root.children.find(node => node instanceof ElementStub && node.tag === 'details') as ElementStub;
+  const controls = panel.children.find(node => node instanceof ElementStub && node.tag === 'div') as ElementStub;
+  const index = controls.children.findIndex(node => node instanceof ElementStub && node.text === 'Sleep tabs across all windows');
+  const sleepButton = controls.children[index] as ElementStub;
+  const status = controls.children[index + 1] as ElementStub;
+  expect(status.hidden).toBe(true);
+  sleepButton.click();
+  expect(status.hidden).toBe(false);
+  expect(status.text).toBe('Putting tabs to sleep across all windows…');
+  await vi.waitFor(() => expect(status.text).toBe(message));
+  expect(sendMessage).toHaveBeenCalledWith({ type: 'sleep', scope: 'all-windows', windowId: 1 });
+});
+
 it('shows returned AI groupings below the suggest button and above local strategies', async () => {
   vi.resetModules();
   const root = new ElementStub('main');
