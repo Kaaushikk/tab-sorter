@@ -2,9 +2,10 @@
 
 Build a Manifest V3 browser extension for Chrome and Brave that organizes the user's open tabs into native browser tab groups. The user can either pick from AI-suggested grouping strategies or type their own instruction in plain English (e.g. "group by website", "separate work from entertainment", "everything about my thesis, rest into Misc").
 
-## 1. Scope: one window at a time (strict)
-- All operations (suggest, preview, apply, undo, ungroup all, collapse all) apply ONLY to the window the popup was opened in. Use the popup's own window ID; never run chrome.tabs.query across all windows.
-- Tabs from other windows must never be read, sent to an AI provider, or modified. There is no "all windows" option in v1.
+## 1. Scope: one window at a time for grouping
+- Grouping operations (suggest, preview, apply, undo, ungroup all, collapse all) apply only to the window the popup was opened in. Use the popup's own window ID for tab queries.
+- Tabs from other windows are excluded from grouping operations and AI requests.
+- The explicit **Sleep tabs across all windows** action can unload eligible pages across regular windows in the current profile. It keeps all tabs open and runs locally.
 - Reason: users keep different contexts in different windows (often one per Windows virtual desktop), and may have several windows per browser, each with unrelated tabs.
 
 ## 2. Primary flow: suggested groupings
@@ -76,7 +77,7 @@ Build a Manifest V3 browser extension for Chrome and Brave that organizes the us
 ## 9. Tech stack
 - TypeScript, Vite (or esbuild), Manifest V3. No heavy frameworks (vanilla TS or Preact at most). Bundle everything; no remote code.
 - Structure: /src/background, /src/popup, /src/options, /src/lib/{grouping,providers,storage,undo,sanitize,browser,types}.ts
-- Vitest unit tests for: domain and content-type grouping, strategy/plan JSON parsing and validation, batching, URL sanitizing, window-scoping (a test proving tabs from other windows are never read), and undo: whole-snapshot restore, per-group restore leaving other groups untouched, tabs closed or manually moved since Apply, restoring into a previously existing group, the 5-snapshot limit, and re-matching groups after a simulated restart.
+- Vitest unit tests for domain and content-type grouping, strategy/plan JSON parsing and validation, batching, URL sanitizing, window-scoped grouping, tab sleep across regular windows, and undo. Cover whole-snapshot restore, per-group restore leaving other groups untouched, tabs closed or manually moved since Apply, restoring into a previously existing group, the 5-snapshot limit, and re-matching groups after a simulated restart.
 
 ## 10. Open-source and release readiness
 - MIT license (LICENSE file), .gitignore (including .env), no secrets anywhere in the repo or history.

@@ -2,14 +2,14 @@
 
 Organize one browser window into native tab groups. Choose a local strategy, ask your own AI provider for ideas, or describe the groups you want in plain English. Preview every plan before applying it.
 
-**Status:** v0.1.2 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and successful live provider checks are pending; see [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md). This is not a Chrome Web Store publication.
+**Status:** v0.2.9 personal trial build. Lint, automated tests, and the production build are checked. Manual Chrome/Brave certification and live provider verification are tracked in [compatibility](#browser-compatibility) and [manual tests](docs/MANUAL_TESTS.md).
 
 <!-- Demo GIF placeholder: replace with docs/assets/demo.gif after recording synthetic test tabs. -->
 **Demo GIF:** coming after browser validation. Do not record personal tabs or API keys.
 
 ## Features
 
-- Strictly one window at a time; no all-windows mode or cross-profile behavior.
+- Grouping works in the current window. **Free memory** can also put inactive tabs to sleep across the current browser profile.
 - Always-available **By website** and **By content type** strategies, entirely on device.
 - Optional AI suggestions, custom instructions, and refinements through a ChatGPT plan, Anthropic, an OpenAI-compatible endpoint, or local Ollama. No hosted Tab Sorter server.
 - Flat native groups with titles and colors, group previews, Collapse all, and Ungroup all.
@@ -47,6 +47,8 @@ After rebuilding, click Reload on the extension's card and reopen the popup. Do 
 ## Use it
 
 Open **Free memory** at the top of the popup to unload selected tabs, a group, or eligible inactive tabs in the current window. Tabs stay in the tab strip and reload when activated. Active, pinned, audible, already-discarded, browser-internal, and browser-protected tabs are skipped. Unloading can lose unsaved page state, so save work first.
+
+Choose **Sleep tabs across all windows** to unload eligible pages in every regular window in the current browser profile. The active tab in each window stays loaded, and tabs and groups keep their positions.
 
 The individual tab list shows whether each page is loaded or sleeping and when it was last used if the browser provides that information. **Suggested groups** shows up to three groups whose loaded tabs are eligible and have all been idle for at least 30 minutes. The group with the most pages to unload appears first. Suggestions are calculated on your device, and pages stay loaded until you choose to unload them. Use the browser’s Task Manager (Shift+Esc on Windows) for RAM and CPU figures.
 
@@ -173,7 +175,7 @@ src/lib/validation.ts strict JSON schemas and tab-ID invariants
 tests/                real command integration plus browser API mocks
 ```
 
-All tab and group queries must supply an explicit `windowId`. Do not add an all-windows query, injected page script, remote dependency, or telemetry. Tests prove other-window tabs are absent from reads and snapshots. See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the original [SPEC.md](SPEC.md).
+Use an explicit `windowId` for tab and group queries. Only the user-initiated **Sleep tabs across all windows** action enumerates tabs across regular windows. Keep other-window tabs out of grouping previews, AI requests, and snapshots. Do not add an injected page script, remote dependency, or telemetry. See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [SPEC.md](SPEC.md).
 
 ## Release
 

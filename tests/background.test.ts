@@ -42,9 +42,44 @@ it('unloads eligible inactive tabs through the command handler while preserving 
   const before = mock.tabs.map(({ discarded: _discarded, ...tab }) => { void _discarded; return tab; });
   expect(await send({ type: 'sleep', scope: 'inactive', windowId: 1 })).toMatchObject({ discarded: 2, skipped: 6 });
   expect(mock.api.tabs.discard.mock.calls.map(([id]) => id)).toEqual([7, 8]);
+  expect(mock.api.windows.getAll).not.toHaveBeenCalled();
   expect(mock.tabs.map(({ discarded: _discarded, ...tab }) => { void _discarded; return tab; })).toEqual(before);
   expect(mock.groups).toEqual([{ id: 10, title: 'Reading', color: 'blue', collapsed: true }]);
   expect((await send<WindowState>({ type: 'load', windowId: 1 })).tabs.find(t => t.id === 7)?.discarded).toBe(true);
+});
+
+it('sleeps eligible tabs across regular windows without touching groups, private windows, or tabs that moved', async () => {
+  const tabs = [
+    tab(1, undefined, { active: true }),
+    tab(2, undefined, { groupId: 10 }),
+    tab(3, undefined, { windowId: 2, active: true }),
+    tab(4, undefined, { windowId: 2, groupId: 20 }),
+    tab(5, undefined, { windowId: 2, audible: true }),
+    tab(6, undefined, { windowId: 3, incognito: true }),
+    tab(7, undefined, { windowId: 4 }),
+    tab(8, undefined, { windowId: 2 }),
+  ];
+  mock.setTabs(tabs);
+  const groups = [
+    { id: 10, title: 'Reading', color: 'blue', collapsed: true },
+    { id: 20, title: 'Research', color: 'red', collapsed: false },
+  ] as const;
+  mock.setGroups([...groups]);
+  const windows = [1, 2, 3, 4].map(id => ({
+    id, type: id === 4 ? 'popup' : 'normal', incognito: id === 3,
+    tabs: tabs.filter(tab => tab.windowId === id),
+  }));
+  mock.api.windows.getAll.mockResolvedValue(structuredClone(windows));
+  mock.tabs[7].windowId = 1;
+
+  const before = structuredClone(mock.tabs);
+  expect(await send({ type: 'sleep', scope: 'all-windows', windowId: 1 })).toMatchObject({
+    discarded: 2, skipped: 4, message: expect.stringContaining('across all regular windows'),
+  });
+  expect(mock.api.windows.getAll).toHaveBeenCalledExactlyOnceWith({ windowTypes: ['normal'], populate: true });
+  expect(mock.api.tabs.discard.mock.calls).toEqual([[2], [4]]);
+  expect(mock.tabs).toEqual(before.map(tab => [2, 4].includes(tab.id) ? { ...tab, discarded: true } : tab));
+  expect(mock.groups).toEqual(groups);
 });
 
 it('unloads only the selected group and rechecks membership immediately before unloading', async () => {

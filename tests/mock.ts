@@ -14,7 +14,11 @@ export function browserMock(initial: Tab[] = [], initialGroups: Group[] = []) {
   });
   const cleanup = () => { groups = groups.filter(g => tabs.some(t=>t.groupId===g.id)); };
   const api = {
-    windows:{get:vi.fn(async (id:number) => ({id,type:'normal',incognito:false})),onRemoved:{addListener:vi.fn()}},
+    windows:{
+      get:vi.fn(async (id:number) => ({id,type:'normal',incognito:false})),
+      getAll:vi.fn<(query: chrome.windows.QueryOptions) => Promise<{ id: number; type: string; incognito: boolean; tabs: Tab[] }[]>>(),
+      onRemoved:{addListener:vi.fn()},
+    },
     tabs:{
       get:vi.fn(async (id:number) => {const t=tabs.find(t=>t.id===id);if(!t)throw new Error('No such tab');return structuredClone(t);}),
       discard:vi.fn(async (id:number) => {const t=tabs.find(t=>t.id===id);if(!t||t.active||t.discarded)return undefined;t.discarded=true;return structuredClone(t);}),

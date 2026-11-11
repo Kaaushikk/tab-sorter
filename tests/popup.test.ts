@@ -34,7 +34,8 @@ it.each(['none', 'chatgpt'] as const)('opens the popup with %s settings after lo
   }));
   vi.stubGlobal('chrome', { windows: { getCurrent: async () => ({ id: 1 }) }, runtime: { sendMessage } });
   await import('../src/popup/index');
-  await vi.waitFor(() => expect(root.text).toContain('This window only · 0 tabs'));
+  await vi.waitFor(() => expect(root.text).toContain('0 tabs in this window'));
+  expect(root.text).toContain('Sleep tabs across all windows');
   expect(root.text).toContain(provider === 'none' ? 'Set up AI suggestions' : 'Suggest groupings');
   expect(root.text).toContain(provider === 'chatgpt' ? 'Using ChatGPT plan · Manage ChatGPT usage' : 'Local strategies always work');
 });

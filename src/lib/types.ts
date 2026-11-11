@@ -23,11 +23,12 @@ export interface Snapshot {
 export interface WindowState { windowId: number; tabs: Tab[]; groups: Group[]; strategies: Strategy[]; snapshots: Snapshot[]; settings: Omit<Settings, 'apiKey' | 'chatgptKey'>; notice?: string }
 export interface Result { restored: number; skipped: number; message: string }
 export interface MemoryResult { discarded: number; skipped: number; message: string }
-export type MemoryCommand = (
+export type SleepAction =
   | { type: 'sleep'; scope: 'selected'; tabIds: number[] }
   | { type: 'sleep'; scope: 'group'; groupId: number; onlyIdle?: true }
   | { type: 'sleep'; scope: 'inactive' }
-) & { windowId: number };
+  | { type: 'sleep'; scope: 'all-windows' };
+export type MemoryCommand = SleepAction & { windowId: number };
 export type AiStage = 'preparing' | 'connecting' | 'waiting' | 'receiving' | 'validating' | 'retrying';
 export interface AiProgress { stage?: AiStage; attempt?: number; batch?: number; batches?: number; characters?: number }
 export interface AiControl { signal: AbortSignal; report(progress: AiProgress): Promise<void> | void }

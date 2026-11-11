@@ -8,7 +8,7 @@ Tab Sorter has no backend and does not collect analytics, telemetry, advertising
 
 ## Data processed on your device
 
-When you open the popup, Tab Sorter reads tab IDs, titles, URLs, positions, pinned state, and native tab group metadata **only in that popup's browser window**. Local strategies infer website and content type from hostnames and URL patterns. It does not read tabs in other windows or profiles. Incognito operation is disabled.
+When you open the popup, Tab Sorter reads tab IDs, titles, URLs, positions, pinned state, and native tab group metadata **only in that popup's browser window**. Local strategies infer website and content type from hostnames and URL patterns. When you choose **Sleep tabs across all windows**, Tab Sorter checks tab metadata in regular windows in the current browser profile to determine which pages it can unload. The extension neither stores nor sends that data for this operation. Incognito operation is disabled.
 
 Settings, API keys, saved presets, strategy selection counts, and undo snapshots are stored in `chrome.storage.local` in the current browser profile, not sync storage. Each window keeps at most five undo snapshots containing local full URLs, titles, order, group membership, title, color, and collapsed state. Session storage holds transient previews and browser-session identity. This extension does not encrypt local storage; access to your OS/browser profile may expose it.
 

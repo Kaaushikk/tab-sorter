@@ -21,7 +21,7 @@ aiSuggestions.append(el('h2', 'Suggested groupings'), aiCards);
 const localCards = el('div', undefined, 'stack'), history = el('section'), presets = el('div', undefined, 'row');
 const instruction = el('textarea'); instruction.placeholder = 'Group by website, separate work from entertainment…'; instruction.maxLength = 2000; instruction.setAttribute('aria-label', 'Custom grouping instruction');
 const refine = el('input'); refine.placeholder = 'Refine this plan…'; refine.maxLength = 2000; refine.setAttribute('aria-label', 'Refine selected grouping');
-const scope = el('div', 'This window only', 'scope');
+const scope = el('div', 'Current window', 'scope');
 const providerHint = el('p', 'Local strategies always work without an API key.', 'muted');
 const suggestButton = button('✦ Suggest groupings', async () => {
   if (state?.settings.provider === 'none') {
@@ -36,7 +36,7 @@ const memory = memoryPanel(command => run(async () => {
   const result = await send<{ message: string }>({ ...command, windowId });
   await reload();
   show(result.message);
-}));
+}, command.scope === 'all-windows' ? 'Putting tabs to sleep across all windows…' : undefined));
 
 async function send<T>(command: Command): Promise<T> {
   const r = await chrome.runtime.sendMessage(command) as Response<T>;
@@ -45,8 +45,8 @@ async function send<T>(command: Command): Promise<T> {
 }
 function show(message: string, error = false): void { status.hidden = false; if (status.textContent !== message) status.textContent = message; status.className = `status${error ? ' error' : ''}`; }
 function locks(): void { root.querySelectorAll('button,input,textarea').forEach(n => { (n as HTMLButtonElement).disabled = n === stopAi ? !activeAi || activeAi.cancelling : busy; }); apply.disabled = busy || !selected?.groups.length; root.setAttribute('aria-busy', String(busy)); }
-async function run(fn: () => Promise<void>): Promise<void> {
-  if (busy) return; busy = true; locks(); show('Working on this window…');
+async function run(fn: () => Promise<void>, workingMessage = 'Working on this window…'): Promise<void> {
+  if (busy) return; busy = true; locks(); show(workingMessage);
   try { await fn(); } catch (e) { show(e instanceof Error ? e.message : 'Something went wrong.', true); }
   finally { busy = false; locks(); }
 }
@@ -193,7 +193,7 @@ async function reload(): Promise<void> {
     providerHint.textContent = 'Local strategies always work without an API key.';
   }
   if (selected) selected = state.strategies.find(s => s.id === selected!.id);
-  scope.textContent = `This window only · ${state.tabs.length} tabs`;
+  scope.textContent = `${state.tabs.length} tabs in this window`;
   presets.replaceChildren();
   for (const preset of state.settings.presets) presets.append(button(preset.name, () => { instruction.value = preset.instruction; void custom(); }, 'chip'));
   renderStrategies(); renderHistory();

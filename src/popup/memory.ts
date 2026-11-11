@@ -1,10 +1,6 @@
 import { canSleep, SLEEP_IDLE_MINUTES, suggestSleepGroups } from '../lib/memory';
 import { button, el, field } from '../lib/ui';
-import type { MemoryCommand, Tab, WindowState } from '../lib/types';
-
-type SleepAction = Omit<Extract<MemoryCommand, { scope: 'selected' }>, 'windowId'>
-  | Omit<Extract<MemoryCommand, { scope: 'group' }>, 'windowId'>
-  | Omit<Extract<MemoryCommand, { scope: 'inactive' }>, 'windowId'>;
+import type { SleepAction, Tab, WindowState } from '../lib/types';
 
 const relativeTime = new Intl.RelativeTimeFormat(undefined, { numeric: 'always' });
 
@@ -72,7 +68,7 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
     const eligible = next.tabs.filter(canSleep), selectedGroup = groups.value;
     const ids = new Set(eligible.map(tab => tab.id));
     for (const id of chosen) if (!ids.has(id)) chosen.delete(id);
-    count.textContent = `${eligible.length} tabs available · ${next.tabs.filter(tab => tab.discarded).length} already sleeping`;
+    count.textContent = `This window · ${eligible.length} available · ${next.tabs.filter(tab => tab.discarded).length} sleeping`;
     const now = Date.now();
     const recommended = suggestSleepGroups(next.tabs, next.groups, now).slice(0, 3);
     suggestions.replaceChildren(el('strong', 'Suggested groups'));
@@ -110,7 +106,10 @@ export function memoryPanel(perform: (command: SleepAction) => Promise<void>) {
   const body = el('div', undefined, 'stack');
   body.append(el('p', 'Unload pages to free memory. Tabs stay in place and reload when opened. Unsaved entries or page state may be lost.'),
     el('p', 'Active, pinned, audio-playing, and browser-protected tabs are skipped.', 'muted'),
-    count, suggestions, button('Sleep inactive tabs', () => perform({ type: 'sleep', scope: 'inactive' })), groupControls, individual);
+    count,
+    button('Sleep inactive tabs in this window', () => perform({ type: 'sleep', scope: 'inactive' })),
+    button('Sleep tabs across all windows', () => perform({ type: 'sleep', scope: 'all-windows' })),
+    suggestions, groupControls, individual);
   panel.append(summary, body);
   return { panel, update };
 }

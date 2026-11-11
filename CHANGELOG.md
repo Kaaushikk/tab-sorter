@@ -4,6 +4,10 @@ This project follows semantic versioning. Before 1.0.0, behavior and storage for
 
 ## [Unreleased]
 
+### Added in v0.2.9
+
+- Put eligible inactive tabs to sleep across all regular windows in the current browser profile.
+
 ### Added in v0.2.8
 
 - Show which tabs are loaded or sleeping and when they were last used. Suggest idle tab groups to sleep from **Free memory**.

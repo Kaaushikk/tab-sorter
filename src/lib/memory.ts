@@ -31,18 +31,29 @@ export function suggestSleepGroups(tabs: Tab[], groups: Group[], now = Date.now(
   }).sort((a, b) => b.count - a.count || a.lastUsed - b.lastUsed);
 }
 
+async function tabsInRegularWindows(): Promise<chrome.tabs.Tab[]> {
+  const windows = await chrome.windows.getAll({ windowTypes: ['normal'], populate: true });
+  return windows.flatMap(win => {
+    if (win.type !== 'normal' || win.incognito || win.id === undefined) return [];
+    return (win.tabs ?? []).filter(tab => tab.windowId === win.id && !tab.incognito);
+  });
+}
+
 export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
   if (!chrome.tabs.discard) throw new Error('This browser does not support unloading tabs.');
-  if (!['selected', 'group', 'inactive'].includes(command.scope)) throw new Error('Choose which tabs to unload.');
+  if (!['selected', 'group', 'inactive', 'all-windows'].includes(command.scope)) throw new Error('Choose which tabs to unload.');
+  const allWindows = command.scope === 'all-windows';
   const onlyIdle = command.scope === 'group' && command.onlyIdle === true;
-  const { tabs, groups } = await readWindow(command.windowId, { includeLastAccessed: onlyIdle });
-  let target = tabs;
+  const { tabs, groups } = allWindows
+    ? { tabs: await tabsInRegularWindows(), groups: [] }
+    : await readWindow(command.windowId, { includeLastAccessed: onlyIdle });
+  let target: (Tab | chrome.tabs.Tab)[] = tabs;
   if (command.scope === 'selected') {
     if (!Array.isArray(command.tabIds) || !command.tabIds.length || command.tabIds.some(id => !Number.isInteger(id) || id < 0)) {
       throw new Error('Select at least one tab to unload.');
     }
     const ids = new Set(command.tabIds);
-    target = tabs.filter(tab => ids.has(tab.id));
+    target = tabs.filter(tab => tab.id !== undefined && ids.has(tab.id));
     if (target.length !== ids.size) throw new Error('Selected tabs changed or moved. Reopen Free memory and try again.');
   }
   if (command.scope === 'group') {
@@ -55,10 +66,10 @@ export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
   }
   let discarded = 0;
   for (const before of target) {
-    if (!canSleep(before)) continue;
+    if (before.id === undefined || !canSleep(before)) continue;
     try {
       const current = await chrome.tabs.get(before.id);
-      if (current.windowId !== command.windowId || current.url !== before.url || !canSleep(current)) continue;
+      if (current.windowId !== before.windowId || current.url !== before.url || !canSleep(current)) continue;
       if (command.scope === 'group' && current.groupId !== command.groupId) continue;
       if (onlyIdle && !isIdle(current, now)) continue;
       const result = await chrome.tabs.discard(before.id);
@@ -68,8 +79,9 @@ export async function sleepTabs(command: MemoryCommand): Promise<MemoryResult> {
     }
   }
   const skipped = target.length - discarded;
+  const scope = allWindows ? ' across all regular windows' : '';
   return {
     discarded, skipped,
-    message: `Unloaded ${discarded} tab${discarded === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} protected, sleeping, or unavailable tab${skipped === 1 ? '' : 's'}.` : ''} Open an unloaded tab to reload it.`,
+    message: `Unloaded ${discarded} tab${discarded === 1 ? '' : 's'}${scope}.${skipped ? ` Skipped ${skipped} protected, sleeping, or unavailable tab${skipped === 1 ? '' : 's'}.` : ''} Open an unloaded tab to reload it.`,
   };
 }
